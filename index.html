@@ -106,6 +106,14 @@ const logEl = $('#log');
 function logLine(s) { logEl.textContent += (s ?? '') + '\n'; logEl.scrollTop = logEl.scrollHeight; }
 function clearLog(){ logEl.textContent = '— Log —\n'; }
 function getEOL(){ return eval('`' + $('#eol').value + '`'); } // transforme "\r\n" en CRLF réel
+// --- GitHub repo config (adapter si besoin) ---
+const GH_OWNER  = 'jancelin';
+const GH_REPO   = 'WebSerial-CRTK';s
+// On essaie ces branches dans l'ordre :
+const GH_BRANCH_CANDIDATES = ['gh-pages', 'main'];
+// Extensions autorisées pour les fichiers de conf :
+const ALLOWED_EXT = /\.(txt|cfg|conf|ini|nmea|csv|log)$/i;
+
 
 /* ---------------------- Web Serial state ---------------------- */
 let port, reader, writer;
@@ -200,36 +208,62 @@ const ALLOWED_EXT = /\.(txt|cfg|conf|ini|nmea|csv|log)$/i;
 async function populateConfigSelect(){
   const sel = $('#configSelect');
   sel.innerHTML = '<option value="">— Choisir un fichier (conf_files) —</option>';
+
+  // 1) ESSAI: listing HTML (fonctionne en local avec http.server)
   try {
     const resp = await fetch('conf_files/', { cache: 'no-store' });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const html = await resp.text();
+    if (resp.ok) {
+      const html = await resp.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      let files = Array.from(doc.querySelectorAll('a[href]'))
+        .map(a => a.getAttribute('href') || '')
+        .filter(href => href && !href.startsWith('?') && !href.startsWith('/'))
+        .filter(href => !href.endsWith('/'))
+        .filter(href => ALLOWED_EXT.test(href))
+        .sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
 
-    // Parse l’index HTML généré par python -m http.server
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    let files = Array.from(doc.querySelectorAll('a[href]'))
-      .map(a => a.getAttribute('href') || '')
-      .filter(href => href && !href.startsWith('?') && !href.startsWith('/'))
-      .filter(href => !href.endsWith('/'))
-      .filter(href => ALLOWED_EXT.test(href));
-
-    files.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-
-    for (const f of files) {
-      const opt = document.createElement('option');
-      opt.value = 'conf_files/' + f;
-      opt.textContent = f;
-      sel.appendChild(opt);
+      for (const f of files) {
+        const opt = document.createElement('option');
+        opt.value = 'conf_files/' + f;   // URL relative locale
+        opt.textContent = f;
+        sel.appendChild(opt);
+      }
+      if (files.length) { logLine(`✓ ${files.length} fichier(s) détecté(s) (local).`); return; }
     }
-
-    if (files.length === 0) {
-      logLine('ℹ️ Aucun fichier compatible trouvé dans conf_files/.');
-    } else {
-      logLine(`✓ ${files.length} fichier(s) détecté(s) dans conf_files/.`);
-    }
-  } catch (e) {
-    logLine('ℹ️ Impossible de lister conf_files/ (auto-index manquant ?). Le chargement manuel reste disponible. Détail: ' + (e?.message || e));
+    // si resp non-ok, on laisse tomber et on tente l'API GitHub
+  } catch (_) {
+    // ignore, on tente l’API
   }
+
+  // 2) FALLBACK: GitHub API (utile sur GitHub Pages)
+  for (const branch of GH_BRANCH_CANDIDATES) {
+    try {
+      const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/conf_files?ref=${branch}`;
+      const apiResp = await fetch(apiUrl, { cache: 'no-store' });
+      if (!apiResp.ok) continue;
+      const items = await apiResp.json();
+      const files = (Array.isArray(items) ? items : [])
+        .filter(it => it.type === 'file' && ALLOWED_EXT.test(it.name));
+
+      files.sort((a,b)=>a.name.localeCompare(b.name, undefined, {sensitivity:'base'}));
+
+      for (const it of files) {
+        const opt = document.createElement('option');
+        // Utilise le lien RAW fourni par l’API (CORS ok) :
+        opt.value = it.download_url;
+        opt.textContent = it.name;
+        sel.appendChild(opt);
+      }
+      if (files.length) { 
+        logLine(`✓ ${files.length} fichier(s) détecté(s) via GitHub API (${branch}).`);
+        return;
+      }
+    } catch (e) {
+      // on essaie la branche suivante
+    }
+  }
+
+  logLine('ℹ️ Aucun listing accessible. Utilisez le bouton “fichier personnel”.');
 }
 
 // Appel automatique au chargement de la page
