@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Centipede-RTK Web Serial</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --pad: 12px; --gap: 12px; }
+    body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:1000px;margin:24px auto;padding:0 16px}
+    h1{font-size:1.6rem;margin:0 0 12px}
+    .brand{display:flex; align-items:baseline; gap:10px;}
+    .brand .logo{height:2em; width:auto; vertical-align:middle;}
+    .row{display:flex;gap:var(--gap);align-items:center;flex-wrap:wrap;margin:8px 0}
+    .grow{flex:1 1 auto}
+    label{display:flex;align-items:center;gap:8px}
+    select,input[type="number"],input[type="file"],button{font-size:14px;padding:8px 10px;border-radius:8px;border:1px solid #ccc;background:#fff}
+    button{cursor:pointer}
+    button[disabled]{opacity:.6;cursor:not-allowed}
+    textarea{width:100%;height:200px;padding:10px;border-radius:8px;border:1px solid #ccc;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+    #log{white-space:pre-wrap;background:#111;color:#eee;padding:10px;height:280px;overflow:auto;border-radius:8px}
+    .muted{opacity:0.7}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    footer{margin-top:16px; padding-top:10px; border-top:1px solid #eee; display:flex; align-items:center; gap:12px; font-size:14px; color:#555;}
+    footer a{display:inline-flex; align-items:center; gap:6px; text-decoration:none; color:#0b57d0;}
+    footer svg{width:16px; height:16px; display:inline-block;}
+  </style>
+</head>
+<body>
+  <h1 class="brand">
+    <img src="static/logo.png" alt="Logo" class="logo" />
+    Centipede-RTK Web Serial
+  </h1>
+
+  <div class="row">
+    <button id="connect">🔌 Connecter</button>
+    <button id="disconnect" disabled>⏏️ Déconnecter</button>
+
+    <label>Baud
+      <select id="baud">
+        <option>4800</option>
+        <option>9600</option>
+        <option>19200</option>
+        <option>28800</option>
+        <option>38400</option>
+        <option>57600</option>
+        <option>76800</option>
+        <option selected>115200</option>
+        <option>230400</option>
+        <option>460800</option>
+        <option>576000</option>
+        <option>921600</option>
+      </select>
+    </label>
+
+    <label>Fin de ligne
+      <select id="eol">
+        <option value="\r\n" selected>CRLF</option>
+        <option value="\n">LF</option>
+        <option value="\r">CR</option>
+      </select>
+    </label>
+
+    <label>Délai entre commandes (s)
+      <input id="delay" type="number" min="0" step="0.1" value="5">
+    </label>
+  </div>
+
+  <div class="row">
+    <label>Fichier de configuration
+      <select id="configSelect">
+        <option value="">— Choisir un fichier (conf_files) —</option>
+      </select>
+    </label>
+
+    <label>ou charger un fichier personnel
+      <input id="configFile" type="file" accept=".txt,.cfg,.conf,.ini,.log,.nmea,.csv,.*" />
+    </label>
+  </div>
+
+  <textarea id="cmd" placeholder="Collez/éditez vos commandes ici (une par ligne). Les lignes vides et celles commençant par #, // ou ; seront ignorées."></textarea>
+
+  <div class="toolbar">
+    <button id="send">➡️ Envoyer (multi-lignes)</button>
+    <button id="save">💾 SAVECONFIG</button>
+    <button id="clear">🧹 Effacer le log</button>
+    <span class="muted">Astuce : gardez CRLF si requis par le firmware.</span>
+  </div>
+
+  <pre id="log">— Log —</pre>
+
+  <footer>
+    <span>© 2025 by Centipede-RTK</span>
+    <a href="https://github.com/jancelin" target="_blank" rel="noopener">
+      <!-- Petit logo GitHub (SVG inline) -->
+      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+        <path fill="currentColor" d="M8 .2a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.34c-2.25.49-2.72-1.08-2.72-1.08-.37-.95-.9-1.2-.9-1.2-.74-.51.06-.5.06-.5.82.06 1.25.85 1.25.85.73 1.24 1.92.88 2.39.67.07-.53.28-.88.5-1.08-1.8-.2-3.7-.9-3.7-4a3.14 3.14 0 0 1 .84-2.18 2.9 2.9 0 0 1 .08-2.15s.68-.22 2.22.83a7.6 7.6 0 0 1 4.05 0c1.54-1.05 2.22-.83 2.22-.83.45 1.08.17 1.89.09 2.09a3.13 3.13 0 0 1 .84 2.18c0 3.11-1.9 3.8-3.71 4 .29.25.54.73.54 1.48v2.2c0 .21.15.45.55.38A8 8 0 0 0 8 .2Z"/>
+      </svg>
+      github.com/jancelin
+    </a>
+  </footer>
+
+<script>
+/* ---------------------- Helpers UI ---------------------- */
+const $ = s => document.querySelector(s);
+const logEl = $('#log');
+function logLine(s) { logEl.textContent += (s ?? '') + '\n'; logEl.scrollTop = logEl.scrollHeight; }
+function clearLog(){ logEl.textContent = '— Log —\n'; }
+function getEOL(){ return eval('`' + $('#eol').value + '`'); } // transforme "\r\n" en CRLF réel
+
+/* ---------------------- Web Serial state ---------------------- */
+let port, reader, writer;
+let textDecoder, textEncoder;
+let readableStreamClosed, writableStreamClosed;
+let sendingBatch = false;
+
+function ensureWebSerial(){
+  if (!('serial' in navigator)) {
+    alert('Web Serial non supporté dans ce navigateur. Utilisez Chrome/Chromium desktop.');
+    throw new Error('Web Serial unsupported');
+  }
+}
+
+/* ---------------------- Connect / Disconnect ---------------------- */
+$('#connect').onclick = async () => {
+  try {
+    ensureWebSerial();
+    const baudRate = parseInt($('#baud').value, 10) || 115200;
+
+    // Filtres USB : FTDI(0x0403), CP210x(0x10C4), CH340(0x1A86)
+    const filters = [{usbVendorId:0x0403},{usbVendorId:0x10C4},{usbVendorId:0x1A86}];
+    port = await navigator.serial.requestPort({ filters });
+    await port.open({ baudRate });
+
+    // Streams enc/dec et "pipes" avec suivi pour fermeture propre
+    textDecoder = new TextDecoderStream();
+    readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+    reader = textDecoder.readable.getReader();
+
+    textEncoder = new TextEncoderStream();
+    writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
+    writer = textEncoder.writable.getWriter();
+
+    // Boucle de lecture (terminée par reader.cancel() à la déconnexion)
+    (async function readLoop(){
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (value) logLine(value);
+        }
+      } catch (e) {
+        logLine('✗ Lecture: ' + e.message);
+      }
+    })();
+
+    $('#connect').disabled = true;
+    $('#disconnect').disabled = false;
+    logLine('✓ Connecté @ ' + baudRate + ' bauds');
+  } catch (e) {
+    logLine('✗ Erreur connexion: ' + (e?.message || e));
+  }
+};
+
+$('#disconnect').onclick = async () => {
+  try {
+    if (!port) return;
+    if (sendingBatch) logLine('ℹ️ Envoi en cours — attente avant déconnexion…');
+
+    // 1) Arrêter proprement la lecture
+    try { await reader?.cancel(); } catch {}
+    try { await readableStreamClosed?.catch(()=>{}); } catch {}
+    reader?.releaseLock?.();
+
+    // 2) Fermer proprement l’écriture
+    try { await writer?.close(); } catch {}
+    try { await writableStreamClosed?.catch(()=>{}); } catch {}
+    writer?.releaseLock?.();
+
+    // 3) Fermer le port
+    await port.close();
+
+    // 4) Nettoyage d’état
+    port = undefined; reader = undefined; writer = undefined;
+    textDecoder = textEncoder = undefined;
+    readableStreamClosed = writableStreamClosed = undefined;
+
+    $('#connect').disabled = false;
+    $('#disconnect').disabled = true;
+    logLine('⏏️ Déconnecté');
+  } catch (e) {
+    logLine('✗ Déconnexion: ' + (e?.message || e));
+  }
+};
+
+/* ---------------------- Load config files ---------------------- */
+// Extensions autorisées
+const ALLOWED_EXT = /\.(txt|cfg|conf|ini|nmea|csv|log)$/i;
+
+// Remplit la liste depuis le listing de /conf_files/ (http.server fournit un index HTML)
+async function populateConfigSelect(){
+  const sel = $('#configSelect');
+  sel.innerHTML = '<option value="">— Choisir un fichier (conf_files) —</option>';
+  try {
+    const resp = await fetch('conf_files/', { cache: 'no-store' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const html = await resp.text();
+
+    // Parse l’index HTML généré par python -m http.server
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    let files = Array.from(doc.querySelectorAll('a[href]'))
+      .map(a => a.getAttribute('href') || '')
+      .filter(href => href && !href.startsWith('?') && !href.startsWith('/'))
+      .filter(href => !href.endsWith('/'))
+      .filter(href => ALLOWED_EXT.test(href));
+
+    files.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
+    for (const f of files) {
+      const opt = document.createElement('option');
+      opt.value = 'conf_files/' + f;
+      opt.textContent = f;
+      sel.appendChild(opt);
+    }
+
+    if (files.length === 0) {
+      logLine('ℹ️ Aucun fichier compatible trouvé dans conf_files/.');
+    } else {
+      logLine(`✓ ${files.length} fichier(s) détecté(s) dans conf_files/.`);
+    }
+  } catch (e) {
+    logLine('ℹ️ Impossible de lister conf_files/ (auto-index manquant ?). Le chargement manuel reste disponible. Détail: ' + (e?.message || e));
+  }
+}
+
+// Appel automatique au chargement de la page
+document.addEventListener('DOMContentLoaded', populateConfigSelect);
+
+// Chargement depuis la liste
+$('#configSelect').onchange = async (ev) => {
+  const url = ev.target.value;
+  if (!url) return;
+  try {
+    const resp = await fetch(url, {cache:'no-store'});
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const txt = await resp.text();
+    $('#cmd').value = normalizeText(txt);
+    logLine('✓ Chargé: ' + url);
+  } catch (e) {
+    logLine('✗ Impossible de charger ' + url + ' : ' + (e?.message || e));
+  }
+};
+
+// Fichier perso (local)
+$('#configFile').onchange = async (ev) => {
+  const f = ev.target.files?.[0];
+  if (!f) return;
+  try {
+    const txt = await f.text();
+    $('#cmd').value = normalizeText(txt);
+    $('#configSelect').value = ''; // désélectionner le menu conf_files
+    logLine('✓ Fichier chargé: ' + f.name);
+  } catch (e) {
+    logLine('✗ Lecture fichier: ' + (e?.message || e));
+  }
+};
+
+function normalizeText(t){
+  // Normalise fins de ligne & supprime BOM
+  return t.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim() + '\n';
+}
+
+/* ---------------------- Sending commands ---------------------- */
+$('#send').onclick = async () => {
+  if (!writer) { logLine('✗ Non connecté.'); return; }
+  if (sendingBatch) { logLine('⌛ Déjà en cours. Patiente…'); return; }
+
+  const raw = $('#cmd').value || '';
+  let lines = raw.split('\n')
+    .map(s => s.trim())
+    .filter(s => s.length && !s.startsWith('#') && !s.startsWith('//') && !s.startsWith(';'));
+
+  if (!lines.length) { logLine('ℹ️ Rien à envoyer.'); return; }
+
+  const delaySec = Math.max(0, parseFloat($('#delay').value || '5') || 5);
+  const eol = getEOL();
+
+  sendingBatch = true;
+  $('#send').disabled = true;
+  try {
+    logLine(`▶️ Envoi de ${lines.length} commande(s), délai ${delaySec}s…`);
+    for (let i=0; i<lines.length; i++){
+      const cmd = lines[i];
+      await writer.write(cmd + eol);
+      logLine(`→ [${i+1}/${lines.length}] ${cmd}`);
+      if (i < lines.length - 1) await sleep(delaySec * 1000);
+    }
+    logLine('✅ Lot terminé.');
+  } catch (e) {
+    logLine('✗ Envoi interrompu: ' + (e?.message || e));
+  } finally {
+    sendingBatch = false;
+    $('#send').disabled = false;
+  }
+};
+
+$('#save').onclick = async () => {
+  if (!writer) { logLine('✗ Non connecté.'); return; }
+  try {
+    await writer.write('SAVECONFIG' + getEOL());
+    logLine('→ SAVECONFIG');
+  } catch (e) { logLine('✗ SAVECONFIG: ' + (e?.message || e)); }
+};
+
+$('#clear').onclick = () => clearLog();
+
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
+
