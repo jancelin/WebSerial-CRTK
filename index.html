@@ -9,7 +9,7 @@
     body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:1000px;margin:24px auto;padding:0 16px}
     h1{font-size:1.6rem;margin:0 0 12px}
     .brand{display:flex; align-items:baseline; gap:10px;}
-    .brand .logo{height:2em; width:auto; vertical-align:middle;}
+    .brand .logo{height:1em; width:auto; vertical-align:middle;}
     .row{display:flex;gap:var(--gap);align-items:center;flex-wrap:wrap;margin:8px 0}
     .grow{flex:1 1 auto}
     label{display:flex;align-items:center;gap:8px}
@@ -23,6 +23,7 @@
     footer{margin-top:16px; padding-top:10px; border-top:1px solid #eee; display:flex; align-items:center; gap:12px; font-size:14px; color:#555;}
     footer a{display:inline-flex; align-items:center; gap:6px; text-decoration:none; color:#0b57d0;}
     footer svg{width:16px; height:16px; display:inline-block;}
+    .inline-btn{padding:6px 8px; font-size:13px}
   </style>
 </head>
 <body>
@@ -70,6 +71,7 @@
       <select id="configSelect">
         <option value="">— Choisir un fichier (conf_files) —</option>
       </select>
+      <button id="refreshList" class="inline-btn" title="Rafraîchir la liste">↻</button>
     </label>
 
     <label>ou charger un fichier personnel
@@ -90,12 +92,11 @@
 
   <footer>
     <span>© 2025 by Centipede-RTK</span>
-    <a href="https://github.com/jancelin/WebSerial-CRTK" target="_blank" rel="noopener">
-      <!-- Petit logo GitHub (SVG inline) -->
+    <a href="https://github.com/jancelin" target="_blank" rel="noopener">
       <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
         <path fill="currentColor" d="M8 .2a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.34c-2.25.49-2.72-1.08-2.72-1.08-.37-.95-.9-1.2-.9-1.2-.74-.51.06-.5.06-.5.82.06 1.25.85 1.25.85.73 1.24 1.92.88 2.39.67.07-.53.28-.88.5-1.08-1.8-.2-3.7-.9-3.7-4a3.14 3.14 0 0 1 .84-2.18 2.9 2.9 0 0 1 .08-2.15s.68-.22 2.22.83a7.6 7.6 0 0 1 4.05 0c1.54-1.05 2.22-.83 2.22-.83.45 1.08.17 1.89.09 2.09a3.13 3.13 0 0 1 .84 2.18c0 3.11-1.9 3.8-3.71 4 .29.25.54.73.54 1.48v2.2c0 .21.15.45.55.38A8 8 0 0 0 8 .2Z"/>
       </svg>
-      https://github.com/jancelin/WebSerial-CRTK
+      github.com/jancelin
     </a>
   </footer>
 
@@ -106,14 +107,6 @@ const logEl = $('#log');
 function logLine(s) { logEl.textContent += (s ?? '') + '\n'; logEl.scrollTop = logEl.scrollHeight; }
 function clearLog(){ logEl.textContent = '— Log —\n'; }
 function getEOL(){ return eval('`' + $('#eol').value + '`'); } // transforme "\r\n" en CRLF réel
-// --- GitHub repo config (adapter si besoin) ---
-const GH_OWNER  = 'jancelin';
-const GH_REPO   = 'WebSerial-CRTK';s
-// On essaie ces branches dans l'ordre :
-const GH_BRANCH_CANDIDATES = ['gh-pages', 'main'];
-// Extensions autorisées pour les fichiers de conf :
-const ALLOWED_EXT = /\.(txt|cfg|conf|ini|nmea|csv|log)$/i;
-
 
 /* ---------------------- Web Serial state ---------------------- */
 let port, reader, writer;
@@ -200,76 +193,109 @@ $('#disconnect').onclick = async () => {
   }
 };
 
-/* ---------------------- Load config files ---------------------- */
+/* ---------------------- Listing des fichiers de conf ---------------------- */
+// Repo GitHub (adapter si tu renommes le dépôt ou l’owner)
+const GH_OWNER  = 'jancelin';
+const GH_REPO   = 'WebSerial-CRTK';
+// Essaie ces branches dans l'ordre
+const GH_BRANCH_CANDIDATES = ['gh-pages','main','master'];
 // Extensions autorisées
 const ALLOWED_EXT = /\.(txt|cfg|conf|ini|nmea|csv|log)$/i;
 
-// Remplit la liste depuis le listing de /conf_files/ (http.server fournit un index HTML)
-async function populateConfigSelect(){
+// Rafraîchir manuellement
+$('#refreshList').onclick = () => populateConfigSelect(true);
+
+// Appel automatique au chargement de la page
+document.addEventListener('DOMContentLoaded', () => populateConfigSelect(false));
+
+async function populateConfigSelect(manual){
   const sel = $('#configSelect');
   sel.innerHTML = '<option value="">— Choisir un fichier (conf_files) —</option>';
 
-  // 1) ESSAI: listing HTML (fonctionne en local avec http.server)
-  try {
-    const resp = await fetch('conf_files/', { cache: 'no-store' });
-    if (resp.ok) {
-      const html = await resp.text();
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-      let files = Array.from(doc.querySelectorAll('a[href]'))
-        .map(a => a.getAttribute('href') || '')
-        .filter(href => href && !href.startsWith('?') && !href.startsWith('/'))
-        .filter(href => !href.endsWith('/'))
-        .filter(href => ALLOWED_EXT.test(href))
-        .sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
-
-      for (const f of files) {
-        const opt = document.createElement('option');
-        opt.value = 'conf_files/' + f;   // URL relative locale
-        opt.textContent = f;
-        sel.appendChild(opt);
-      }
-      if (files.length) { logLine(`✓ ${files.length} fichier(s) détecté(s) (local).`); return; }
-    }
-    // si resp non-ok, on laisse tomber et on tente l'API GitHub
-  } catch (_) {
-    // ignore, on tente l’API
+  // 0) Tentative: fichier manifeste optionnel (si tu ajoutes conf_files/index.json)
+  //    Format attendu: ["Feasycom_BT836b.txt","UM980_rover_fullNMEA_5hz_BT921600bd_UP_STABLE.txt", ...]
+  const manifestFiles = await tryFetchManifestJSON();
+  if (manifestFiles && manifestFiles.length) {
+    addOptions(sel, manifestFiles.map(n => ({name:n, url:'conf_files/'+n})));
+    logLine(`✓ ${manifestFiles.length} fichier(s) via index.json.`);
+    return;
   }
 
-  // 2) FALLBACK: GitHub API (utile sur GitHub Pages)
+  // 1) En local: listing HTML (python -m http.server)
+  const localFiles = await tryFetchLocalIndex();
+  if (localFiles && localFiles.length) {
+    addOptions(sel, localFiles.map(n => ({name:n, url:'conf_files/'+n})));
+    logLine(`✓ ${localFiles.length} fichier(s) détecté(s) (local).`);
+    return;
+  }
+
+  // 2) Fallback GitHub API (utile sur GitHub Pages)
+  const ghFiles = await tryFetchGitHubAPI();
+  if (ghFiles && ghFiles.length) {
+    addOptions(sel, ghFiles); // ghFiles contient {name, url:download_url}
+    logLine(`✓ ${ghFiles.length} fichier(s) via GitHub API.`);
+    return;
+  }
+
+  logLine(manual ? 'ℹ️ Aucun fichier détecté.' :
+    'ℹ️ Impossible de lister conf_files/ (auto-index ou API). Utilisez le bouton “fichier personnel” ou ajoutez conf_files/index.json.');
+}
+
+function addOptions(selectEl, items){
+  // items: [{name:'file.txt', url:'...'}]
+  items
+    .filter(it => ALLOWED_EXT.test(it.name))
+    .sort((a,b)=>a.name.localeCompare(b.name, undefined, {sensitivity:'base'}))
+    .forEach(it => {
+      const opt = document.createElement('option');
+      opt.value = it.url;
+      opt.textContent = it.name;
+      selectEl.appendChild(opt);
+    });
+}
+
+async function tryFetchManifestJSON(){
+  try {
+    const resp = await fetch('conf_files/index.json?t=' + Date.now(), {cache:'no-store'});
+    if (!resp.ok) return null;
+    const arr = await resp.json();
+    return (Array.isArray(arr) ? arr.filter(n => typeof n === 'string') : null);
+  } catch { return null; }
+}
+
+async function tryFetchLocalIndex(){
+  try {
+    const resp = await fetch('conf_files/?t=' + Date.now(), { cache: 'no-store' });
+    if (!resp.ok) return null;
+    const html = await resp.text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    let files = Array.from(doc.querySelectorAll('a[href]'))
+      .map(a => a.getAttribute('href') || '')
+      .filter(href => href && !href.startsWith('?') && !href.startsWith('/'))
+      .filter(href => !href.endsWith('/'))
+      .filter(href => ALLOWED_EXT.test(href));
+    return files;
+  } catch { return null; }
+}
+
+async function tryFetchGitHubAPI(){
   for (const branch of GH_BRANCH_CANDIDATES) {
     try {
-      const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/conf_files?ref=${branch}`;
+      const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/conf_files?ref=${encodeURIComponent(branch)}`;
       const apiResp = await fetch(apiUrl, { cache: 'no-store' });
       if (!apiResp.ok) continue;
       const items = await apiResp.json();
       const files = (Array.isArray(items) ? items : [])
-        .filter(it => it.type === 'file' && ALLOWED_EXT.test(it.name));
-
-      files.sort((a,b)=>a.name.localeCompare(b.name, undefined, {sensitivity:'base'}));
-
-      for (const it of files) {
-        const opt = document.createElement('option');
-        // Utilise le lien RAW fourni par l’API (CORS ok) :
-        opt.value = it.download_url;
-        opt.textContent = it.name;
-        sel.appendChild(opt);
-      }
-      if (files.length) { 
-        logLine(`✓ ${files.length} fichier(s) détecté(s) via GitHub API (${branch}).`);
-        return;
-      }
-    } catch (e) {
-      // on essaie la branche suivante
-    }
+        .filter(it => it && it.type === 'file' && typeof it.name === 'string' && typeof it.download_url === 'string')
+        .filter(it => ALLOWED_EXT.test(it.name))
+        .map(it => ({ name: it.name, url: it.download_url }));
+      if (files.length) return files;
+    } catch { /* essaye la branche suivante */ }
   }
-
-  logLine('ℹ️ Aucun listing accessible. Utilisez le bouton “fichier personnel”.');
+  return null;
 }
 
-// Appel automatique au chargement de la page
-document.addEventListener('DOMContentLoaded', populateConfigSelect);
-
-// Chargement depuis la liste
+/* ---------------------- Chargement fichier sélectionné / perso ---------------------- */
 $('#configSelect').onchange = async (ev) => {
   const url = ev.target.value;
   if (!url) return;
@@ -303,7 +329,7 @@ function normalizeText(t){
   return t.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim() + '\n';
 }
 
-/* ---------------------- Sending commands ---------------------- */
+/* ---------------------- Envoi des commandes ---------------------- */
 $('#send').onclick = async () => {
   if (!writer) { logLine('✗ Non connecté.'); return; }
   if (sendingBatch) { logLine('⌛ Déjà en cours. Patiente…'); return; }
