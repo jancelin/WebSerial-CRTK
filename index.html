@@ -598,7 +598,7 @@
     function toggleTerminal() {
       const terminal = $('#uartTerminal');
       terminalVisible = !terminalVisible;
-      
+
       if (terminalVisible) {
         terminal.classList.remove('hidden');
       } else {
@@ -608,17 +608,17 @@
 
     function addToTerminal(message, type = 'info') {
       const terminal = $('#uartTerminal');
-      const timestamp = new Date().toLocaleTimeString('fr-FR', { 
-        hour12: false, 
-        hour: '2-digit', 
-        minute: '2-digit', 
+      const timestamp = new Date().toLocaleTimeString('fr-FR', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
         second: '2-digit',
-        fractionalSecondDigits: 3 
+        fractionalSecondDigits: 3
       });
-      
+
       let prefix = '';
       let cssClass = '';
-      
+
       switch (type) {
         case 'sent':
           prefix = '→ TX: ';
@@ -632,14 +632,14 @@
           prefix = '• ';
           break;
       }
-      
+
       const line = document.createElement('div');
       line.innerHTML = `<span class="timestamp">[${timestamp}]</span> <span class="${cssClass}">${prefix}${escapeHtml(message)}</span>`;
       terminal.appendChild(line);
-      
+
       // Auto-scroll vers le bas
       terminal.scrollTop = terminal.scrollHeight;
-      
+
       // Limiter le nombre de lignes (garder seulement les 200 dernières)
       const lines = terminal.children;
       if (lines.length > 200) {
@@ -1080,7 +1080,7 @@
       try {
         updateStatus(`Envoi de ${lines.length} commande(s)...`, 'info');
         updateProgress(0, 'Démarrage...');
-        
+
         // Effacer le terminal et ajouter un message de début
         clearTerminal();
         addToTerminal(`=== Début de la configuration (${lines.length} commandes) ===`);
@@ -1088,7 +1088,7 @@
         for (let i = 0; i < lines.length; i++) {
           const cmd = lines[i];
           await writer.write(cmd + eol);
-          
+
           // Afficher la commande envoyée dans le terminal
           addToTerminal(cmd + eol.replace(/\n/g, '\\n').replace(/\r/g, '\\r'), 'sent');
 
