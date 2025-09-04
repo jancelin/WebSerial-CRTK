@@ -340,6 +340,31 @@
     .hidden {
       display: none
     }
+
+    .config-description {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #495057;
+    }
+
+    .config-description h4 {
+      margin: 0 0 10px 0;
+      color: #007bff;
+      font-size: 16px;
+    }
+
+    .config-description p {
+      margin: 0 0 8px 0;
+    }
+
+    .config-description p:last-child {
+      margin-bottom: 0;
+    }
   </style>
 </head>
 
@@ -351,99 +376,106 @@
     </h1>
 
     <div class="main-container">
-    <!-- Boutons principaux -->
-    <div class="control-group">
-      <div class="control-row">
-        <button id="connect" class="btn btn-primary" style="flex: 1;">🔌 Connecter</button>
-        <button id="disconnect" class="btn btn-primary hidden" disabled style="flex: 1;">⏏️ Déconnecter</button>
-        <button id="upload" class="btn btn-success" disabled style="flex: 1;">📤 Téléverser</button>
+      <!-- Boutons principaux -->
+      <div class="control-group">
+        <div class="control-row">
+          <button id="connect" class="btn btn-primary" style="flex: 1;">🔌 Connecter</button>
+          <button id="disconnect" class="btn btn-primary hidden" disabled style="flex: 1;">⏏️ Déconnecter</button>
+          <button id="upload" class="btn btn-success" disabled style="flex: 1;">📤 Téléverser</button>
+        </div>
+      </div>
+
+      <!-- Contrôles de configuration -->
+      <div class="control-group">
+        <div class="control-row">
+          <div style="flex: 1; height : 75px;">
+            <label>Vitesse de transmission</label>
+            <select id="baud">
+              <option>4800</option>
+              <option>9600</option>
+              <option>19200</option>
+              <option>28800</option>
+              <option>38400</option>
+              <option>57600</option>
+              <option>76800</option>
+              <option selected>115200</option>
+              <option>230400</option>
+              <option>460800</option>
+              <option>576000</option>
+              <option>921600</option>
+            </select>
+          </div>
+          <div style="flex: 1; height : 75px;">
+            <label>Configurations</label>
+            <div class="file-group">
+              <select id="configSelect">
+                <option value="">— Choisir une configuration —</option>
+              </select>
+              <button id="refreshList" class="refresh-btn" title="Rafraîchir la liste">↻</button>
+            </div>
+          </div>
+          <div style="flex: 0 0 auto; height : 75px;">
+            <label>&nbsp;</label>
+            <div class="settings-menu">
+              <button class="settings-btn" id="settingsToggle" title="Paramètres avancés">⚙️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zone de description -->
+      <div class="control-group" id="configDescriptionContainer" style="display: none;">
+        <div class="config-description" id="configDescription">
+          <!-- Description dynamique -->
+        </div>
+      </div>
+
+      <!-- Barre de progression -->
+      <div class="progress-container hidden" id="progressContainer">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+        <div class="progress-text" id="progressText">En attente...</div>
+      </div>
+
+      <!-- Status -->
+      <div id="status" class="status info">
+        Prêt à se connecter
       </div>
     </div>
 
-    <!-- Contrôles de configuration -->
-    <div class="control-group">
-      <div class="control-row">
-        <div style="flex: 1; height : 75px;">
-          <label>Vitesse de transmission</label>
-          <select id="baud">
-            <option>4800</option>
-            <option>9600</option>
-            <option>19200</option>
-            <option>28800</option>
-            <option>38400</option>
-            <option>57600</option>
-            <option>76800</option>
-            <option selected>115200</option>
-            <option>230400</option>
-            <option>460800</option>
-            <option>576000</option>
-            <option>921600</option>
+    <!-- Modale des paramètres -->
+    <div class="settings-modal" id="settingsModal">
+      <div class="settings-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Paramètres avancés</h2>
+          <button class="close-btn" id="closeModal" title="Fermer">✕</button>
+        </div>
+
+        <div class="control-group">
+          <label>Fin de ligne</label>
+          <select id="eol">
+            <option value="\r\n" selected>CRLF</option>
+            <option value="\n">LF</option>
+            <option value="\r">CR</option>
           </select>
         </div>
-        <div style="flex: 1; height : 75px;">
-          <label>Configurations</label>
-          <div class="file-group">
-            <select id="configSelect">
-              <option value="">— Choisir une configuration —</option>
-            </select>
-            <button id="refreshList" class="refresh-btn" title="Rafraîchir la liste">↻</button>
-          </div>
+
+        <div class="control-group">
+          <label>Délai entre commande(s)</label>
+          <input id="delay" type="number" min="0" step="0.1" value="5">
         </div>
-        <div style="flex: 0 0 auto; height : 75px;">
-          <label>&nbsp;</label>
-          <div class="settings-menu">
-            <button class="settings-btn" id="settingsToggle" title="Paramètres avancés">⚙️</button>
-          </div>
+
+        <div class="control-group">
+          <label>Charger un fichier personnel</label>
+          <input id="configFile" type="file" accept=".txt,.cfg,.conf,.ini,.log,.nmea,.csv,.*" />
+        </div>
+
+        <div class="control-group">
+          <button id="save" class="btn btn-primary" style="width:100%;margin-top:8px">💾 SAVECONFIG</button>
         </div>
       </div>
     </div>
-
-    <!-- Barre de progression -->
-    <div class="progress-container hidden" id="progressContainer">
-      <div class="progress-bar">
-        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-      </div>
-      <div class="progress-text" id="progressText">En attente...</div>
-    </div>
-
-    <!-- Status -->
-    <div id="status" class="status info">
-      Prêt à se connecter
-    </div>
-  </div>
-
-  <!-- Modale des paramètres -->
-  <div class="settings-modal" id="settingsModal">
-    <div class="settings-content">
-      <div class="modal-header">
-        <h2 class="modal-title">Paramètres avancés</h2>
-        <button class="close-btn" id="closeModal" title="Fermer">✕</button>
-      </div>
-
-      <div class="control-group">
-        <label>Fin de ligne</label>
-        <select id="eol">
-          <option value="\r\n" selected>CRLF</option>
-          <option value="\n">LF</option>
-          <option value="\r">CR</option>
-        </select>
-      </div>
-
-      <div class="control-group">
-        <label>Délai entre commande(s)</label>
-        <input id="delay" type="number" min="0" step="0.1" value="5">
-      </div>
-
-      <div class="control-group">
-        <label>Charger un fichier personnel</label>
-        <input id="configFile" type="file" accept=".txt,.cfg,.conf,.ini,.log,.nmea,.csv,.*" />
-      </div>
-
-      <div class="control-group">
-        <button id="save" class="btn btn-primary" style="width:100%;margin-top:8px">💾 SAVECONFIG</button>
-      </div>
-    </div>
-  </div>
   </div>
 
   <footer>
@@ -485,6 +517,81 @@
 
     function getEOL() {
       return eval('`' + $('#eol').value + '`');
+    }
+
+    // Fonction pour extraire la description depuis les commentaires du fichier
+    function extractConfigDescription(content) {
+      if (!content) return null;
+
+      const lines = content.split('\n');
+      const description = {
+        title: '',
+        details: []
+      };
+
+      // Recherche des tags #title: et #content: dans les commentaires
+      for (let i = 0; i < Math.min(30, lines.length); i++) {
+        const line = lines[i].trim();
+
+        // Ignorer les lignes vides
+        if (!line) continue;
+
+        // Si c'est un commentaire (# ou //)
+        if (line.startsWith('#') || line.startsWith('//')) {
+          const comment = line.replace(/^(#|\/\/)\s*/, '');
+
+          // Rechercher le tag title:
+          if (comment.toLowerCase().startsWith('title:')) {
+            description.title = comment.substring(6).trim();
+          }
+          // Rechercher le tag content:
+          else if (comment.toLowerCase().startsWith('content:')) {
+            const content = comment.substring(8).trim();
+            if (content.length > 0) {
+              description.details.push(content);
+            }
+          }
+        } else {
+          // Si on rencontre une ligne non-commentaire et qu'on a déjà des données, on arrête
+          if (description.title || description.details.length > 0) {
+            break;
+          }
+        }
+      }
+
+      return (description.title || description.details.length) ? description : null;
+    }
+
+    // Fonction pour afficher la description
+    function displayConfigDescription(description) {
+      const container = $('#configDescriptionContainer');
+      const descElement = $('#configDescription');
+
+      if (!description) {
+        container.style.display = 'none';
+        return;
+      }
+
+      let html = '';
+      if (description.title) {
+        html += `<h4>${escapeHtml(description.title)}</h4>`;
+      }
+
+      if (description.details.length > 0) {
+        description.details.forEach(detail => {
+          html += `<p>${escapeHtml(detail)}</p>`;
+        });
+      }
+
+      descElement.innerHTML = html;
+      container.style.display = 'block';
+    }
+
+    // Fonction utilitaire pour échapper le HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     // Toggle settings modal
@@ -719,6 +826,7 @@
       if (!url) {
         currentConfig = '';
         $('#upload').disabled = true;
+        displayConfigDescription(null);
         return;
       }
       try {
@@ -729,10 +837,15 @@
         currentConfig = normalizeText(txt);
         $('#upload').disabled = !isConnected;
         updateStatus('Configuration chargée: ' + url.split('/').pop(), 'success');
+
+        // Extraire et afficher la description
+        const description = extractConfigDescription(txt);
+        displayConfigDescription(description);
       } catch (e) {
         updateStatus('Impossible de charger ' + url + ' : ' + (e?.message || e), 'error');
         currentConfig = '';
         $('#upload').disabled = true;
+        displayConfigDescription(null);
       }
     };
 
@@ -742,6 +855,7 @@
       if (!f) {
         currentConfig = '';
         $('#upload').disabled = true;
+        displayConfigDescription(null);
         return;
       }
       try {
@@ -751,10 +865,15 @@
         $('#configSelect').value = ''; // désélectionner le menu conf_files
         $('#upload').disabled = !isConnected;
         updateStatus('Fichier chargé: ' + f.name, 'success');
+
+        // Extraire et afficher la description
+        const description = extractConfigDescription(txt);
+        displayConfigDescription(description);
       } catch (e) {
         updateStatus('Erreur lecture fichier: ' + (e?.message || e), 'error');
         currentConfig = '';
         $('#upload').disabled = true;
+        displayConfigDescription(null);
       }
     };
 
