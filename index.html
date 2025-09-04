@@ -1,380 +1,844 @@
 <!doctype html>
 <html lang="fr">
+
 <head>
   <meta charset="utf-8" />
   <title>Centipede-RTK Web Serial</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root { --pad: 12px; --gap: 12px; }
-    body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:1000px;margin:24px auto;padding:0 16px}
-    h1{font-size:1.6rem;margin:0 0 12px}
-    .brand{display:flex; align-items:baseline; gap:10px;}
-    .brand .logo{height:2em; width:auto; vertical-align:middle;}
-    .row{display:flex;gap:var(--gap);align-items:center;flex-wrap:wrap;margin:8px 0}
-    .grow{flex:1 1 auto}
-    label{display:flex;align-items:center;gap:8px}
-    select,input[type="number"],input[type="file"],button{font-size:14px;padding:8px 10px;border-radius:8px;border:1px solid #ccc;background:#fff}
-    button{cursor:pointer}
-    button[disabled]{opacity:.6;cursor:not-allowed}
-    textarea{width:100%;height:200px;padding:10px;border-radius:8px;border:1px solid #ccc;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
-    #log{white-space:pre-wrap;background:#111;color:#eee;padding:10px;height:280px;overflow:auto;border-radius:8px}
-    .muted{opacity:0.7}
-    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
-    footer{margin-top:16px; padding-top:10px; border-top:1px solid #eee; display:flex; align-items:center; gap:12px; font-size:14px; color:#555;}
-    footer a{display:inline-flex; align-items:center; gap:6px; text-decoration:none; color:#0b57d0;}
-    footer svg{width:16px; height:16px; display:inline-block;}
-    .inline-btn{padding:6px 8px; font-size:13px}
+    :root {
+      --primary: #0b57d0;
+      --success: #28a745;
+      --danger: #dc3545;
+      --warning: #ffc107;
+      --light: #f8f9fa;
+      --dark: #343a40;
+    }
+
+    body {
+      font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 16px;
+      background-color: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin: 24px 0;
+      text-align: center;
+      color: var(--dark)
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .brand .logo {
+      height: 2.5em;
+      width: auto;
+    }
+
+    .main-container {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1)
+    }
+
+    .control-group {
+      margin-bottom: 20px
+    }
+
+    .control-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--dark)
+    }
+
+    .control-row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-end;
+      flex-wrap: wrap
+    }
+
+    select,
+    input[type="number"],
+    input[type="file"] {
+      font-size: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 2px solid #ddd;
+      background: #fff;
+      width: 100%;
+      max-width: none;
+    }
+
+    select:focus,
+    input:focus {
+      outline: none;
+      border-color: var(--primary)
+    }
+
+    .btn {
+      font-size: 16px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white
+    }
+
+    .btn-primary:hover {
+      background: #0943a6
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white
+    }
+
+    .btn-success:hover {
+      background: #218838
+    }
+
+    .btn[disabled] {
+      opacity: .6;
+      cursor: not-allowed
+    }
+
+    .progress-container {
+      margin-top: 24px
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 20px;
+      background: #e9ecef;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 12px
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), #4285f4);
+      transition: width 0.3s ease;
+      border-radius: 10px
+    }
+
+    .progress-text {
+      text-align: center;
+      font-size: 14px;
+      color: var(--dark)
+    }
+
+    .settings-menu {
+      position: relative;
+      display: inline-block
+    }
+
+    .settings-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+      transition: background 0.2s
+    }
+
+    .settings-btn:hover {
+      background: #f0f0f0
+    }
+
+    .settings-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(2px);
+    }
+
+    .settings-modal.active {
+      display: flex;
+    }
+
+    .settings-content {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      padding: 32px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      position: relative;
+      animation: modalSlideIn 0.3s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--dark);
+      margin: 0;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 50%;
+      transition: background 0.2s;
+      color: #666;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .close-btn:hover {
+      background: #f0f0f0;
+      color: var(--danger);
+    }
+
+    .settings-content select,
+    .settings-content input[type="number"],
+    .settings-content input[type="file"] {
+      width: 100%;
+      max-width: none;
+      box-sizing: border-box;
+      font-size: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 2px solid #ddd;
+      background: #fff;
+      margin: 0;
+    }
+
+    .file-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px
+    }
+
+    .refresh-btn {
+      padding: 8px;
+      background: none;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px
+    }
+
+    .refresh-btn:hover {
+      background: #f0f0f0
+    }
+
+    footer {
+      margin-top: auto;
+      padding: 16px 0;
+      border-top: 1px solid #eee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-size: 14px;
+      color: #666
+    }
+
+    footer a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      color: var(--primary)
+    }
+
+    footer svg {
+      width: 16px;
+      height: 16px
+    }
+
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 0;
+      margin-top: 16px;
+      font-weight: 500
+    }
+
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb
+    }
+
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb
+    }
+
+    .hidden {
+      display: none
+    }
   </style>
 </head>
+
 <body>
-  <h1 class="brand">
-    <img src="static/logo.png" alt="Logo" class="logo" />
-    Centipede-RTK Web Serial
-  </h1>
+  <div class="main-content">
+    <h1 class="brand">
+      <img src="static/logo.png" alt="Logo" class="logo" />
+      Centipede-RTK Web Serial
+    </h1>
 
-  <div class="row">
-    <button id="connect">🔌 Connecter</button>
-    <button id="disconnect" disabled>⏏️ Déconnecter</button>
+    <div class="main-container">
+    <!-- Boutons principaux -->
+    <div class="control-group">
+      <div class="control-row">
+        <button id="connect" class="btn btn-primary" style="flex: 1;">🔌 Connecter</button>
+        <button id="disconnect" class="btn btn-primary hidden" disabled style="flex: 1;">⏏️ Déconnecter</button>
+        <button id="upload" class="btn btn-success" disabled style="flex: 1;">📤 Téléverser</button>
+      </div>
+    </div>
 
-    <label>Baud
-      <select id="baud">
-        <option>4800</option>
-        <option>9600</option>
-        <option>19200</option>
-        <option>28800</option>
-        <option>38400</option>
-        <option>57600</option>
-        <option>76800</option>
-        <option selected>115200</option>
-        <option>230400</option>
-        <option>460800</option>
-        <option>576000</option>
-        <option>921600</option>
-      </select>
-    </label>
+    <!-- Contrôles de configuration -->
+    <div class="control-group">
+      <div class="control-row">
+        <div style="flex: 1; height : 75px;">
+          <label>Vitesse de transmission</label>
+          <select id="baud">
+            <option>4800</option>
+            <option>9600</option>
+            <option>19200</option>
+            <option>28800</option>
+            <option>38400</option>
+            <option>57600</option>
+            <option>76800</option>
+            <option selected>115200</option>
+            <option>230400</option>
+            <option>460800</option>
+            <option>576000</option>
+            <option>921600</option>
+          </select>
+        </div>
+        <div style="flex: 1; height : 75px;">
+          <label>Configurations</label>
+          <div class="file-group">
+            <select id="configSelect">
+              <option value="">— Choisir une configuration —</option>
+            </select>
+            <button id="refreshList" class="refresh-btn" title="Rafraîchir la liste">↻</button>
+          </div>
+        </div>
+        <div style="flex: 0 0 auto; height : 75px;">
+          <label>&nbsp;</label>
+          <div class="settings-menu">
+            <button class="settings-btn" id="settingsToggle" title="Paramètres avancés">⚙️</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-    <label>Fin de ligne
-      <select id="eol">
-        <option value="\r\n" selected>CRLF</option>
-        <option value="\n">LF</option>
-        <option value="\r">CR</option>
-      </select>
-    </label>
+    <!-- Barre de progression -->
+    <div class="progress-container hidden" id="progressContainer">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+      </div>
+      <div class="progress-text" id="progressText">En attente...</div>
+    </div>
 
-    <label>Délai entre commandes (s)
-      <input id="delay" type="number" min="0" step="0.1" value="5">
-    </label>
+    <!-- Status -->
+    <div id="status" class="status info">
+      Prêt à se connecter
+    </div>
   </div>
 
-  <div class="row">
-    <label>Fichier de configuration
-      <select id="configSelect">
-        <option value="">— Choisir un fichier (conf_files) —</option>
-      </select>
-      <button id="refreshList" class="inline-btn" title="Rafraîchir la liste">↻</button>
-    </label>
+  <!-- Modale des paramètres -->
+  <div class="settings-modal" id="settingsModal">
+    <div class="settings-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Paramètres avancés</h2>
+        <button class="close-btn" id="closeModal" title="Fermer">✕</button>
+      </div>
 
-    <label>ou charger un fichier personnel
-      <input id="configFile" type="file" accept=".txt,.cfg,.conf,.ini,.log,.nmea,.csv,.*" />
-    </label>
+      <div class="control-group">
+        <label>Fin de ligne</label>
+        <select id="eol">
+          <option value="\r\n" selected>CRLF</option>
+          <option value="\n">LF</option>
+          <option value="\r">CR</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Délai entre commande(s)</label>
+        <input id="delay" type="number" min="0" step="0.1" value="5">
+      </div>
+
+      <div class="control-group">
+        <label>Charger un fichier personnel</label>
+        <input id="configFile" type="file" accept=".txt,.cfg,.conf,.ini,.log,.nmea,.csv,.*" />
+      </div>
+
+      <div class="control-group">
+        <button id="save" class="btn btn-primary" style="width:100%;margin-top:8px">💾 SAVECONFIG</button>
+      </div>
+    </div>
   </div>
-
-  <textarea id="cmd" placeholder="Collez/éditez vos commandes ici (une par ligne). Les lignes vides et celles commençant par #, // ou ; seront ignorées."></textarea>
-
-  <div class="toolbar">
-    <button id="send">➡️ Envoyer (multi-lignes)</button>
-    <button id="save">💾 SAVECONFIG</button>
-    <button id="clear">🧹 Effacer le log</button>
-    <span class="muted">Astuce : gardez CRLF si requis par le firmware.</span>
   </div>
-
-  <pre id="log">— Log —</pre>
 
   <footer>
     <span>© 2025 by Centipede-RTK</span>
     <a href="https://github.com/jancelin/WebSerial-CRTK" target="_blank" rel="noopener">
       <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-        <path fill="currentColor" d="M8 .2a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.34c-2.25.49-2.72-1.08-2.72-1.08-.37-.95-.9-1.2-.9-1.2-.74-.51.06-.5.06-.5.82.06 1.25.85 1.25.85.73 1.24 1.92.88 2.39.67.07-.53.28-.88.5-1.08-1.8-.2-3.7-.9-3.7-4a3.14 3.14 0 0 1 .84-2.18 2.9 2.9 0 0 1 .08-2.15s.68-.22 2.22.83a7.6 7.6 0 0 1 4.05 0c1.54-1.05 2.22-.83 2.22-.83.45 1.08.17 1.89.09 2.09a3.13 3.13 0 0 1 .84 2.18c0 3.11-1.9 3.8-3.71 4 .29.25.54.73.54 1.48v2.2c0 .21.15.45.55.38A8 8 0 0 0 8 .2Z"/>
+        <path fill="currentColor"
+          d="M8 .2a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.34c-2.25.49-2.72-1.08-2.72-1.08-.37-.95-.9-1.2-.9-1.2-.74-.51.06-.5.06-.5.82.06 1.25.85 1.25.85.73 1.24 1.92.88 2.39.67.07-.53.28-.88.5-1.08-1.8-.2-3.7-.9-3.7-4a3.14 3.14 0 0 1 .84-2.18 2.9 2.9 0 0 1 .08-2.15s.68-.22 2.22.83a7.6 7.6 0 0 1 4.05 0c1.54-1.05 2.22-.83 2.22-.83.45 1.08.17 1.89.09 2.09a3.13 3.13 0 0 1 .84 2.18c0 3.11-1.9 3.8-3.71 4 .29.25.54.73.54 1.48v2.2c0 .21.15.45.55.38A8 8 0 0 0 8 .2Z" />
       </svg>
       github.com/jancelin/Webserial-CRTK
     </a>
   </footer>
 
-<script>
-/* ---------------------- Helpers UI ---------------------- */
-const $ = s => document.querySelector(s);
-const logEl = $('#log');
-function logLine(s) { logEl.textContent += (s ?? '') + '\n'; logEl.scrollTop = logEl.scrollHeight; }
-function clearLog(){ logEl.textContent = '— Log —\n'; }
-function getEOL(){ return eval('`' + $('#eol').value + '`'); } // transforme "\r\n" en CRLF réel
+  <script>
+    /* ---------------------- Helpers UI ---------------------- */
+    const $ = s => document.querySelector(s);
+    let currentConfig = '';
+    let isConnected = false;
 
-/* ---------------------- Web Serial state ---------------------- */
-let port, reader, writer;
-let textDecoder, textEncoder;
-let readableStreamClosed, writableStreamClosed;
-let sendingBatch = false;
-
-function ensureWebSerial(){
-  if (!('serial' in navigator)) {
-    alert('Web Serial non supporté dans ce navigateur. Utilisez Chrome/Chromium desktop.');
-    throw new Error('Web Serial unsupported');
-  }
-}
-
-/* ---------------------- Connect / Disconnect ---------------------- */
-$('#connect').onclick = async () => {
-  try {
-    ensureWebSerial();
-    const baudRate = parseInt($('#baud').value, 10) || 115200;
-
-    // Filtres USB : FTDI(0x0403), CP210x(0x10C4), CH340(0x1A86)
-    const filters = [{usbVendorId:0x0403},{usbVendorId:0x10C4},{usbVendorId:0x1A86}];
-    port = await navigator.serial.requestPort({ filters });
-    await port.open({ baudRate });
-
-    // Streams enc/dec et "pipes" avec suivi pour fermeture propre
-    textDecoder = new TextDecoderStream();
-    readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
-    reader = textDecoder.readable.getReader();
-
-    textEncoder = new TextEncoderStream();
-    writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
-    writer = textEncoder.writable.getWriter();
-
-    // Boucle de lecture (terminée par reader.cancel() à la déconnexion)
-    (async function readLoop(){
-      try {
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          if (value) logLine(value);
-        }
-      } catch (e) {
-        logLine('✗ Lecture: ' + e.message);
-      }
-    })();
-
-    $('#connect').disabled = true;
-    $('#disconnect').disabled = false;
-    logLine('✓ Connecté @ ' + baudRate + ' bauds');
-  } catch (e) {
-    logLine('✗ Erreur connexion: ' + (e?.message || e));
-  }
-};
-
-$('#disconnect').onclick = async () => {
-  try {
-    if (!port) return;
-    if (sendingBatch) logLine('ℹ️ Envoi en cours — attente avant déconnexion…');
-
-    // 1) Arrêter proprement la lecture
-    try { await reader?.cancel(); } catch {}
-    try { await readableStreamClosed?.catch(()=>{}); } catch {}
-    reader?.releaseLock?.();
-
-    // 2) Fermer proprement l’écriture
-    try { await writer?.close(); } catch {}
-    try { await writableStreamClosed?.catch(()=>{}); } catch {}
-    writer?.releaseLock?.();
-
-    // 3) Fermer le port
-    await port.close();
-
-    // 4) Nettoyage d’état
-    port = undefined; reader = undefined; writer = undefined;
-    textDecoder = textEncoder = undefined;
-    readableStreamClosed = writableStreamClosed = undefined;
-
-    $('#connect').disabled = false;
-    $('#disconnect').disabled = true;
-    logLine('⏏️ Déconnecté');
-  } catch (e) {
-    logLine('✗ Déconnexion: ' + (e?.message || e));
-  }
-};
-
-/* ---------------------- Listing des fichiers de conf ---------------------- */
-// Repo GitHub (adapter si tu renommes le dépôt ou l’owner)
-const GH_OWNER  = 'jancelin';
-const GH_REPO   = 'WebSerial-CRTK';
-// Essaie ces branches dans l'ordre
-const GH_BRANCH_CANDIDATES = ['gh-pages','main','master'];
-// Extensions autorisées
-const ALLOWED_EXT = /\.(txt|cfg|conf|ini|nmea|csv|log)$/i;
-
-// Rafraîchir manuellement
-$('#refreshList').onclick = () => populateConfigSelect(true);
-
-// Appel automatique au chargement de la page
-document.addEventListener('DOMContentLoaded', () => populateConfigSelect(false));
-
-async function populateConfigSelect(manual){
-  const sel = $('#configSelect');
-  sel.innerHTML = '<option value="">— Choisir un fichier (conf_files) —</option>';
-
-  // 0) Tentative: fichier manifeste optionnel (si tu ajoutes conf_files/index.json)
-  //    Format attendu: ["Feasycom_BT836b.txt","UM980_rover_fullNMEA_5hz_BT921600bd_UP_STABLE.txt", ...]
-  const manifestFiles = await tryFetchManifestJSON();
-  if (manifestFiles && manifestFiles.length) {
-    addOptions(sel, manifestFiles.map(n => ({name:n, url:'conf_files/'+n})));
-    logLine(`✓ ${manifestFiles.length} fichier(s) via index.json.`);
-    return;
-  }
-
-  // 1) En local: listing HTML (python -m http.server)
-  const localFiles = await tryFetchLocalIndex();
-  if (localFiles && localFiles.length) {
-    addOptions(sel, localFiles.map(n => ({name:n, url:'conf_files/'+n})));
-    logLine(`✓ ${localFiles.length} fichier(s) détecté(s) (local).`);
-    return;
-  }
-
-  // 2) Fallback GitHub API (utile sur GitHub Pages)
-  const ghFiles = await tryFetchGitHubAPI();
-  if (ghFiles && ghFiles.length) {
-    addOptions(sel, ghFiles); // ghFiles contient {name, url:download_url}
-    logLine(`✓ ${ghFiles.length} fichier(s) via GitHub API.`);
-    return;
-  }
-
-  logLine(manual ? 'ℹ️ Aucun fichier détecté.' :
-    'ℹ️ Impossible de lister conf_files/ (auto-index ou API). Utilisez le bouton “fichier personnel” ou ajoutez conf_files/index.json.');
-}
-
-function addOptions(selectEl, items){
-  // items: [{name:'file.txt', url:'...'}]
-  items
-    .filter(it => ALLOWED_EXT.test(it.name))
-    .sort((a,b)=>a.name.localeCompare(b.name, undefined, {sensitivity:'base'}))
-    .forEach(it => {
-      const opt = document.createElement('option');
-      opt.value = it.url;
-      opt.textContent = it.name;
-      selectEl.appendChild(opt);
-    });
-}
-
-async function tryFetchManifestJSON(){
-  try {
-    const resp = await fetch('conf_files/index.json?t=' + Date.now(), {cache:'no-store'});
-    if (!resp.ok) return null;
-    const arr = await resp.json();
-    return (Array.isArray(arr) ? arr.filter(n => typeof n === 'string') : null);
-  } catch { return null; }
-}
-
-async function tryFetchLocalIndex(){
-  try {
-    const resp = await fetch('conf_files/?t=' + Date.now(), { cache: 'no-store' });
-    if (!resp.ok) return null;
-    const html = await resp.text();
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    let files = Array.from(doc.querySelectorAll('a[href]'))
-      .map(a => a.getAttribute('href') || '')
-      .filter(href => href && !href.startsWith('?') && !href.startsWith('/'))
-      .filter(href => !href.endsWith('/'))
-      .filter(href => ALLOWED_EXT.test(href));
-    return files;
-  } catch { return null; }
-}
-
-async function tryFetchGitHubAPI(){
-  for (const branch of GH_BRANCH_CANDIDATES) {
-    try {
-      const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/conf_files?ref=${encodeURIComponent(branch)}`;
-      const apiResp = await fetch(apiUrl, { cache: 'no-store' });
-      if (!apiResp.ok) continue;
-      const items = await apiResp.json();
-      const files = (Array.isArray(items) ? items : [])
-        .filter(it => it && it.type === 'file' && typeof it.name === 'string' && typeof it.download_url === 'string')
-        .filter(it => ALLOWED_EXT.test(it.name))
-        .map(it => ({ name: it.name, url: it.download_url }));
-      if (files.length) return files;
-    } catch { /* essaye la branche suivante */ }
-  }
-  return null;
-}
-
-/* ---------------------- Chargement fichier sélectionné / perso ---------------------- */
-$('#configSelect').onchange = async (ev) => {
-  const url = ev.target.value;
-  if (!url) return;
-  try {
-    const resp = await fetch(url, {cache:'no-store'});
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const txt = await resp.text();
-    $('#cmd').value = normalizeText(txt);
-    logLine('✓ Chargé: ' + url);
-  } catch (e) {
-    logLine('✗ Impossible de charger ' + url + ' : ' + (e?.message || e));
-  }
-};
-
-// Fichier perso (local)
-$('#configFile').onchange = async (ev) => {
-  const f = ev.target.files?.[0];
-  if (!f) return;
-  try {
-    const txt = await f.text();
-    $('#cmd').value = normalizeText(txt);
-    $('#configSelect').value = ''; // désélectionner le menu conf_files
-    logLine('✓ Fichier chargé: ' + f.name);
-  } catch (e) {
-    logLine('✗ Lecture fichier: ' + (e?.message || e));
-  }
-};
-
-function normalizeText(t){
-  // Normalise fins de ligne & supprime BOM
-  return t.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim() + '\n';
-}
-
-/* ---------------------- Envoi des commandes ---------------------- */
-$('#send').onclick = async () => {
-  if (!writer) { logLine('✗ Non connecté.'); return; }
-  if (sendingBatch) { logLine('⌛ Déjà en cours. Patiente…'); return; }
-
-  const raw = $('#cmd').value || '';
-  let lines = raw.split('\n')
-    .map(s => s.trim())
-    .filter(s => s.length && !s.startsWith('#') && !s.startsWith('//') && !s.startsWith(';'));
-
-  if (!lines.length) { logLine('ℹ️ Rien à envoyer.'); return; }
-
-  const delaySec = Math.max(0, parseFloat($('#delay').value || '5') || 5);
-  const eol = getEOL();
-
-  sendingBatch = true;
-  $('#send').disabled = true;
-  try {
-    logLine(`▶️ Envoi de ${lines.length} commande(s), délai ${delaySec}s…`);
-    for (let i=0; i<lines.length; i++){
-      const cmd = lines[i];
-      await writer.write(cmd + eol);
-      logLine(`→ [${i+1}/${lines.length}] ${cmd}`);
-      if (i < lines.length - 1) await sleep(delaySec * 1000);
+    function updateStatus(message, type = 'info') {
+      const statusEl = $('#status');
+      statusEl.textContent = message;
+      statusEl.className = `status ${type}`;
     }
-    logLine('✅ Lot terminé.');
-  } catch (e) {
-    logLine('✗ Envoi interrompu: ' + (e?.message || e));
-  } finally {
-    sendingBatch = false;
-    $('#send').disabled = false;
-  }
-};
 
-$('#save').onclick = async () => {
-  if (!writer) { logLine('✗ Non connecté.'); return; }
-  try {
-    await writer.write('SAVECONFIG' + getEOL());
-    logLine('→ SAVECONFIG');
-  } catch (e) { logLine('✗ SAVECONFIG: ' + (e?.message || e)); }
-};
+    function showProgress(show = true) {
+      const container = $('#progressContainer');
+      if (show) {
+        container.classList.remove('hidden');
+      } else {
+        container.classList.add('hidden');
+      }
+    }
 
-$('#clear').onclick = () => clearLog();
+    function updateProgress(percentage, text) {
+      $('#progressFill').style.width = percentage + '%';
+      $('#progressText').textContent = text;
+    }
 
-function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-</script>
+    function getEOL() {
+      return eval('`' + $('#eol').value + '`');
+    }
+
+    // Toggle settings modal
+    $('#settingsToggle').onclick = () => {
+      const modal = $('#settingsModal');
+      modal.classList.add('active');
+    };
+
+    // Close modal
+    $('#closeModal').onclick = () => {
+      const modal = $('#settingsModal');
+      modal.classList.remove('active');
+    };
+
+    // Close modal when clicking on backdrop
+    $('#settingsModal').onclick = (e) => {
+      if (e.target === $('#settingsModal')) {
+        $('#settingsModal').classList.remove('active');
+      }
+    };
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        $('#settingsModal').classList.remove('active');
+      }
+    });
+
+    /* ---------------------- Web Serial state ---------------------- */
+    let port, reader, writer;
+    let textDecoder, textEncoder;
+    let readableStreamClosed, writableStreamClosed;
+    let sendingBatch = false;
+
+    function ensureWebSerial() {
+      if (!('serial' in navigator)) {
+        updateStatus('Web Serial non supporté dans ce navigateur. Utilisez Chrome/Chromium desktop.', 'error');
+        throw new Error('Web Serial unsupported');
+      }
+    }
+
+    /* ---------------------- Connect / Disconnect ---------------------- */
+    $('#connect').onclick = async () => {
+      try {
+        ensureWebSerial();
+        const baudRate = parseInt($('#baud').value, 10) || 115200;
+
+        updateStatus('Connexion en cours...', 'info');
+
+        // Filtres USB : FTDI(0x0403), CP210x(0x10C4), CH340(0x1A86)
+        const filters = [{ usbVendorId: 0x0403 }, { usbVendorId: 0x10C4 }, { usbVendorId: 0x1A86 }];
+        port = await navigator.serial.requestPort({ filters });
+        await port.open({ baudRate });
+
+        // Streams enc/dec et "pipes" avec suivi pour fermeture propre
+        textDecoder = new TextDecoderStream();
+        readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+        reader = textDecoder.readable.getReader();
+
+        textEncoder = new TextEncoderStream();
+        writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
+        writer = textEncoder.writable.getWriter();
+
+        // Boucle de lecture (terminée par reader.cancel() à la déconnexion)
+        (async function readLoop() {
+          try {
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              // On ne log plus les réponses dans l'interface simplifiée
+            }
+          } catch (e) {
+            updateStatus('Erreur de lecture: ' + e.message, 'error');
+          }
+        })();
+
+        isConnected = true;
+        $('#connect').classList.add('hidden');
+        $('#disconnect').classList.remove('hidden');
+        $('#disconnect').disabled = false;
+        $('#upload').disabled = !currentConfig;
+        updateStatus(`Connecté @ ${baudRate} bauds`, 'success');
+      } catch (e) {
+        updateStatus('Erreur de connexion: ' + (e?.message || e), 'error');
+      }
+    };
+
+    $('#disconnect').onclick = async () => {
+      try {
+        if (!port) return;
+        if (sendingBatch) {
+          updateStatus('Envoi en cours — attente avant déconnexion…', 'info');
+        }
+
+        // 1) Arrêter proprement la lecture
+        try { await reader?.cancel(); } catch { }
+        try { await readableStreamClosed?.catch(() => { }); } catch { }
+        reader?.releaseLock?.();
+
+        // 2) Fermer proprement l'écriture
+        try { await writer?.close(); } catch { }
+        try { await writableStreamClosed?.catch(() => { }); } catch { }
+        writer?.releaseLock?.();
+
+        // 3) Fermer le port
+        await port.close();
+
+        // 4) Nettoyage d'état
+        port = undefined; reader = undefined; writer = undefined;
+        textDecoder = textEncoder = undefined;
+        readableStreamClosed = writableStreamClosed = undefined;
+
+        isConnected = false;
+        $('#connect').classList.remove('hidden');
+        $('#disconnect').classList.add('hidden');
+        $('#disconnect').disabled = true;
+        $('#upload').disabled = true;
+        showProgress(false);
+        updateStatus('Déconnecté', 'info');
+      } catch (e) {
+        updateStatus('Erreur de déconnexion: ' + (e?.message || e), 'error');
+      }
+    };
+
+    /* ---------------------- Listing des fichiers de conf ---------------------- */
+    // Repo GitHub (adapter si tu renommes le dépôt ou l'owner)
+    const GH_OWNER = 'jancelin';
+    const GH_REPO = 'WebSerial-CRTK';
+    // Essaie ces branches dans l'ordre
+    const GH_BRANCH_CANDIDATES = ['gh-pages', 'main', 'master'];
+    // Extensions autorisées
+    const ALLOWED_EXT = /\.(txt|cfg|conf|ini|nmea|csv|log)$/i;
+
+    // Rafraîchir manuellement
+    $('#refreshList').onclick = () => populateConfigSelect(true);
+
+    // Appel automatique au chargement de la page
+    document.addEventListener('DOMContentLoaded', () => populateConfigSelect(false));
+
+    async function populateConfigSelect(manual) {
+      const sel = $('#configSelect');
+      sel.innerHTML = '<option value="" disabled selected>— Choisir une configuration —</option>';
+
+      // 0) Tentative: fichier manifeste optionnel (si tu ajoutes conf_files/index.json)
+      //    Format attendu: ["Feasycom_BT836b.txt","UM980_rover_fullNMEA_5hz_BT921600bd_UP_STABLE.txt", ...]
+      const manifestFiles = await tryFetchManifestJSON();
+      if (manifestFiles && manifestFiles.length) {
+        addOptions(sel, manifestFiles.map(n => ({ name: n, url: 'conf_files/' + n })));
+        updateStatus(`${manifestFiles.length} fichier(s) de configuration trouvé(s)`, 'success');
+        return;
+      }
+
+      // 1) En local: listing HTML (python -m http.server)
+      const localFiles = await tryFetchLocalIndex();
+      if (localFiles && localFiles.length) {
+        addOptions(sel, localFiles.map(n => ({ name: n, url: 'conf_files/' + n })));
+        updateStatus(`${localFiles.length} fichier(s) de configuration détecté(s).`, 'success');
+        return;
+      }
+
+      // 2) Fallback GitHub API (utile sur GitHub Pages)
+      const ghFiles = await tryFetchGitHubAPI();
+      if (ghFiles && ghFiles.length) {
+        addOptions(sel, ghFiles); // ghFiles contient {name, url:download_url}
+        updateStatus(`${ghFiles.length} fichier(s) de configuration via GitHub API`, 'success');
+        return;
+      }
+
+      updateStatus(manual ? 'Aucun fichier de configuration détecté.' :
+        'Impossible de lister conf_files/ (auto-index ou API). Utilisez le bouton "fichier personnel".', 'info');
+    }
+
+    function addOptions(selectEl, items) {
+      // items: [{name:'file.txt', url:'...'}]
+      items
+        .filter(it => ALLOWED_EXT.test(it.name))
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+        .forEach(it => {
+          const opt = document.createElement('option');
+          opt.value = it.url;
+          // Nettoyer le nom : supprimer l'extension et remplacer _ par des espaces
+          const cleanName = it.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' ');
+          opt.textContent = cleanName;
+          selectEl.appendChild(opt);
+        });
+    }
+
+    async function tryFetchManifestJSON() {
+      try {
+        const resp = await fetch('conf_files/index.json?t=' + Date.now(), { cache: 'no-store' });
+        if (!resp.ok) return null;
+        const arr = await resp.json();
+        return (Array.isArray(arr) ? arr.filter(n => typeof n === 'string') : null);
+      } catch { return null; }
+    }
+
+    async function tryFetchLocalIndex() {
+      try {
+        const resp = await fetch('conf_files/?t=' + Date.now(), { cache: 'no-store' });
+        if (!resp.ok) return null;
+        const html = await resp.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        let files = Array.from(doc.querySelectorAll('a[href]'))
+          .map(a => a.getAttribute('href') || '')
+          .filter(href => href && !href.startsWith('?') && !href.startsWith('/'))
+          .filter(href => !href.endsWith('/'))
+          .filter(href => ALLOWED_EXT.test(href));
+        return files;
+      } catch { return null; }
+    }
+
+    async function tryFetchGitHubAPI() {
+      for (const branch of GH_BRANCH_CANDIDATES) {
+        try {
+          const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/conf_files?ref=${encodeURIComponent(branch)}`;
+          const apiResp = await fetch(apiUrl, { cache: 'no-store' });
+          if (!apiResp.ok) continue;
+          const items = await apiResp.json();
+          const files = (Array.isArray(items) ? items : [])
+            .filter(it => it && it.type === 'file' && typeof it.name === 'string' && typeof it.download_url === 'string')
+            .filter(it => ALLOWED_EXT.test(it.name))
+            .map(it => ({ name: it.name, url: it.download_url }));
+          if (files.length) return files;
+        } catch { /* essaye la branche suivante */ }
+      }
+      return null;
+    }
+
+    /* ---------------------- Chargement fichier sélectionné / perso ---------------------- */
+    $('#configSelect').onchange = async (ev) => {
+      const url = ev.target.value;
+      if (!url) {
+        currentConfig = '';
+        $('#upload').disabled = true;
+        return;
+      }
+      try {
+        updateStatus('Chargement de la configuration...', 'info');
+        const resp = await fetch(url, { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const txt = await resp.text();
+        currentConfig = normalizeText(txt);
+        $('#upload').disabled = !isConnected;
+        updateStatus('Configuration chargée: ' + url.split('/').pop(), 'success');
+      } catch (e) {
+        updateStatus('Impossible de charger ' + url + ' : ' + (e?.message || e), 'error');
+        currentConfig = '';
+        $('#upload').disabled = true;
+      }
+    };
+
+    // Fichier perso (local)
+    $('#configFile').onchange = async (ev) => {
+      const f = ev.target.files?.[0];
+      if (!f) {
+        currentConfig = '';
+        $('#upload').disabled = true;
+        return;
+      }
+      try {
+        updateStatus('Chargement du fichier...', 'info');
+        const txt = await f.text();
+        currentConfig = normalizeText(txt);
+        $('#configSelect').value = ''; // désélectionner le menu conf_files
+        $('#upload').disabled = !isConnected;
+        updateStatus('Fichier chargé: ' + f.name, 'success');
+      } catch (e) {
+        updateStatus('Erreur lecture fichier: ' + (e?.message || e), 'error');
+        currentConfig = '';
+        $('#upload').disabled = true;
+      }
+    };
+
+    function normalizeText(t) {
+      // Normalise fins de ligne & supprime BOM
+      return t.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim() + '\n';
+    }
+
+    /* ---------------------- Upload des commandes ---------------------- */
+    $('#upload').onclick = async () => {
+      if (!writer) {
+        updateStatus('Non connecté.', 'error');
+        return;
+      }
+      if (!currentConfig) {
+        updateStatus('Aucune configuration chargée.', 'error');
+        return;
+      }
+      if (sendingBatch) {
+        updateStatus('Envoi déjà en cours. Patientez...', 'info');
+        return;
+      }
+
+      const lines = currentConfig.split('\n')
+        .map(s => s.trim())
+        .filter(s => s.length && !s.startsWith('#') && !s.startsWith('//') && !s.startsWith(';'));
+
+      if (!lines.length) {
+        updateStatus('Aucune commande valide dans la configuration.', 'error');
+        return;
+      }
+
+      const delaySec = Math.max(0, parseFloat($('#delay').value || '5') || 5);
+      const eol = getEOL();
+
+      sendingBatch = true;
+      $('#upload').disabled = true;
+      showProgress(true);
+
+      try {
+        updateStatus(`Envoi de ${lines.length} commande(s)...`, 'info');
+        updateProgress(0, 'Démarrage...');
+
+        for (let i = 0; i < lines.length; i++) {
+          const cmd = lines[i];
+          await writer.write(cmd + eol);
+
+          const progress = ((i + 1) / lines.length) * 100;
+          updateProgress(progress, `Commande ${i + 1}/${lines.length}: ${cmd.substring(0, 30)}${cmd.length > 30 ? '...' : ''}`);
+
+          if (i < lines.length - 1) {
+            await sleep(delaySec * 1000);
+          }
+        }
+
+        updateProgress(100, 'Configuration envoyée avec succès!');
+        updateStatus('Configuration envoyée avec succès!', 'success');
+
+        // Masquer la barre de progression après 3 secondes
+        setTimeout(() => showProgress(false), 3000);
+      } catch (e) {
+        updateStatus('Erreur lors de l\'envoi: ' + (e?.message || e), 'error');
+        showProgress(false);
+      } finally {
+        sendingBatch = false;
+        $('#upload').disabled = !currentConfig || !isConnected;
+      }
+    };
+
+    $('#save').onclick = async () => {
+      if (!writer) {
+        updateStatus('Non connecté.', 'error');
+        return;
+      }
+      try {
+        await writer.write('SAVECONFIG' + getEOL());
+        updateStatus('Commande SAVECONFIG envoyée', 'success');
+      } catch (e) {
+        updateStatus('Erreur SAVECONFIG: ' + (e?.message || e), 'error');
+      }
+    };
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+  </script>
 </body>
-</html>
 
+</html>
