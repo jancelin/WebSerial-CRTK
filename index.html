@@ -129,7 +129,77 @@
     }
 
     .progress-container {
-      margin-top: 24px
+      margin-top: 24px;
+      position: relative;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .progress-info-btn {
+      background: none;
+      border: 1px solid #ddd;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      transition: all 0.2s;
+    }
+
+    .progress-info-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .uart-terminal {
+      background: #1a1a1a;
+      color: #00ff00;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      padding: 12px;
+      border-radius: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 12px;
+      border: 1px solid #333;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .uart-terminal::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .uart-terminal::-webkit-scrollbar-track {
+      background: #2a2a2a;
+    }
+
+    .uart-terminal::-webkit-scrollbar-thumb {
+      background: #555;
+      border-radius: 4px;
+    }
+
+    .uart-terminal .sent {
+      color: #ffff00;
+    }
+
+    .uart-terminal .received {
+      color: #00ff00;
+    }
+
+    .uart-terminal .timestamp {
+      color: #888;
+      font-size: 10px;
     }
 
     .progress-bar {
@@ -433,10 +503,15 @@
 
       <!-- Barre de progression -->
       <div class="progress-container hidden" id="progressContainer">
+        <div class="progress-header">
+          <div></div>
+          <button class="progress-info-btn" id="terminalToggle" title="Afficher/masquer le terminal UART">i</button>
+        </div>
         <div class="progress-bar">
           <div class="progress-fill" id="progressFill" style="width: 0%"></div>
         </div>
         <div class="progress-text" id="progressText">En attente...</div>
+        <div class="uart-terminal hidden" id="uartTerminal"></div>
       </div>
 
       <!-- Status -->
@@ -495,6 +570,7 @@
     const $ = s => document.querySelector(s);
     let currentConfig = '';
     let isConnected = false;
+    let terminalVisible = false;
 
     function updateStatus(message, type = 'info') {
       const statusEl = $('#status');
@@ -508,12 +584,71 @@
         container.classList.remove('hidden');
       } else {
         container.classList.add('hidden');
+        // Masquer aussi le terminal quand on masque la barre de progression
+        $('#uartTerminal').classList.add('hidden');
+        terminalVisible = false;
       }
     }
 
     function updateProgress(percentage, text) {
       $('#progressFill').style.width = percentage + '%';
       $('#progressText').textContent = text;
+    }
+
+    function toggleTerminal() {
+      const terminal = $('#uartTerminal');
+      terminalVisible = !terminalVisible;
+      
+      if (terminalVisible) {
+        terminal.classList.remove('hidden');
+      } else {
+        terminal.classList.add('hidden');
+      }
+    }
+
+    function addToTerminal(message, type = 'info') {
+      const terminal = $('#uartTerminal');
+      const timestamp = new Date().toLocaleTimeString('fr-FR', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit',
+        fractionalSecondDigits: 3 
+      });
+      
+      let prefix = '';
+      let cssClass = '';
+      
+      switch (type) {
+        case 'sent':
+          prefix = '→ TX: ';
+          cssClass = 'sent';
+          break;
+        case 'received':
+          prefix = '← RX: ';
+          cssClass = 'received';
+          break;
+        default:
+          prefix = '• ';
+          break;
+      }
+      
+      const line = document.createElement('div');
+      line.innerHTML = `<span class="timestamp">[${timestamp}]</span> <span class="${cssClass}">${prefix}${escapeHtml(message)}</span>`;
+      terminal.appendChild(line);
+      
+      // Auto-scroll vers le bas
+      terminal.scrollTop = terminal.scrollHeight;
+      
+      // Limiter le nombre de lignes (garder seulement les 200 dernières)
+      const lines = terminal.children;
+      if (lines.length > 200) {
+        terminal.removeChild(lines[0]);
+      }
+    }
+
+    function clearTerminal() {
+      $('#uartTerminal').innerHTML = '';
     }
 
     function getEOL() {
@@ -621,6 +756,11 @@
       modal.classList.add('active');
     };
 
+    // Toggle terminal
+    $('#terminalToggle').onclick = () => {
+      toggleTerminal();
+    };
+
     // Close modal
     $('#closeModal').onclick = () => {
       const modal = $('#settingsModal');
@@ -682,7 +822,10 @@
             while (true) {
               const { value, done } = await reader.read();
               if (done) break;
-              // On ne log plus les réponses dans l'interface simplifiée
+              // Afficher les données reçues dans le terminal si visible
+              if (value && value.length > 0) {
+                addToTerminal(value, 'received');
+              }
             }
           } catch (e) {
             updateStatus('Erreur de lecture: ' + e.message, 'error');
@@ -937,10 +1080,17 @@
       try {
         updateStatus(`Envoi de ${lines.length} commande(s)...`, 'info');
         updateProgress(0, 'Démarrage...');
+        
+        // Effacer le terminal et ajouter un message de début
+        clearTerminal();
+        addToTerminal(`=== Début de la configuration (${lines.length} commandes) ===`);
 
         for (let i = 0; i < lines.length; i++) {
           const cmd = lines[i];
           await writer.write(cmd + eol);
+          
+          // Afficher la commande envoyée dans le terminal
+          addToTerminal(cmd + eol.replace(/\n/g, '\\n').replace(/\r/g, '\\r'), 'sent');
 
           const progress = ((i + 1) / lines.length) * 100;
           updateProgress(progress, `Commande ${i + 1}/${lines.length}: ${cmd.substring(0, 30)}${cmd.length > 30 ? '...' : ''}`);
@@ -952,6 +1102,7 @@
 
         updateProgress(100, 'Configuration envoyée avec succès!');
         updateStatus('Configuration envoyée avec succès!', 'success');
+        addToTerminal('=== Fin de la configuration ===');
 
         // Masquer la barre de progression après 3 secondes
         setTimeout(() => showProgress(false), 3000);
@@ -970,7 +1121,9 @@
         return;
       }
       try {
-        await writer.write('SAVECONFIG' + getEOL());
+        const command = 'SAVECONFIG' + getEOL();
+        await writer.write(command);
+        addToTerminal(command.replace(/\n/g, '\\n').replace(/\r/g, '\\r'), 'sent');
         updateStatus('Commande SAVECONFIG envoyée', 'success');
       } catch (e) {
         updateStatus('Erreur SAVECONFIG: ' + (e?.message || e), 'error');
