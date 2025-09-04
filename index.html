@@ -574,12 +574,12 @@
 
       let html = '';
       if (description.title) {
-        html += `<h4>${escapeHtml(description.title)}</h4>`;
+        html += `<h4>${convertUrlsToLinks(escapeHtml(description.title))}</h4>`;
       }
 
       if (description.details.length > 0) {
         description.details.forEach(detail => {
-          html += `<p>${escapeHtml(detail)}</p>`;
+          html += `<p>${convertUrlsToLinks(escapeHtml(detail))}</p>`;
         });
       }
 
@@ -592,6 +592,26 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
+    }
+
+    // Fonction pour convertir les URLs en liens cliquables
+    function convertUrlsToLinks(text) {
+      // Expression régulière pour détecter les URLs
+      const urlRegex = /(https?:\/\/[^\s<>"]+)/gi;
+
+      return text.replace(urlRegex, function (url) {
+        // Nettoyer l'URL pour enlever la ponctuation finale éventuelle
+        let cleanUrl = url;
+        const punctuation = /[.,!?;:]$/;
+        let endPunct = '';
+
+        if (punctuation.test(url)) {
+          endPunct = url.slice(-1);
+          cleanUrl = url.slice(0, -1);
+        }
+
+        return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline;">${cleanUrl}</a>${endPunct}`;
+      });
     }
 
     // Toggle settings modal
