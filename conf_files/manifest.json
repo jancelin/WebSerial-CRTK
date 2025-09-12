@@ -1,0 +1,7 @@
+[
+    "NavX_bluetooth.cfg",
+    "NavX_GNSS_Precis.cfg",
+    "NavX_GNSS_Stable.cfg",
+    "RTKBase_GNSS_UM980.cfg",
+    "RTKBase_GNSS_UM982.cfg"
+]
