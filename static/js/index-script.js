@@ -1,8 +1,8 @@
 /* ========================================
-   Centipede Web Serial - JavaScript pour index.html (mode débutant)
+   Centipede Web Serial - JavaScript for index.html (beginner mode)
    ======================================== */
 
-// Variables spécifiques au mode débutant
+// Variables specific to beginner mode
 let currentConfig = '';
 let isConnected = false;
 let terminalVisible = false;
@@ -20,7 +20,7 @@ function showProgress(show = true) {
         container.classList.remove('hidden');
     } else {
         container.classList.add('hidden');
-        // Masquer aussi le terminal quand on masque la barre de progression
+        // Also hide terminal when hiding progress bar
         $('#uartTerminal').classList.add('hidden');
         terminalVisible = false;
     }
@@ -73,14 +73,8 @@ function addToTerminal(message, type = 'info') {
     line.innerHTML = `<span class="timestamp">[${timestamp}]</span> <span class="${cssClass}">${prefix}${escapeHtml(message)}</span>`;
     terminal.appendChild(line);
 
-    // Auto-scroll vers le bas
+    // Auto-scroll to bottom
     terminal.scrollTop = terminal.scrollHeight;
-
-    // Limiter le nombre de lignes (garder seulement les 200 dernières)
-    const lines = terminal.children;
-    if (lines.length > 200) {
-        terminal.removeChild(lines[0]);
-    }
 }
 
 function clearTerminal() {
@@ -114,17 +108,17 @@ function displayConfigDescription(description) {
 
 /* ---------------------- Event Handlers ---------------------- */
 document.addEventListener('DOMContentLoaded', async () => {
-    // Initialiser la liste des configurations
+    // Initialize configuration list
     try {
         const result = await populateConfigSelect(false);
         if (result[0].length > 0) {
-            updateStatus(`${result[0].length} fichier(s) de configuration trouvé(s) via ${result[1]}`, 'success');
+            updateStatus(`${result[0].length} configuration file(s) found via ${result[1]}`, 'success');
         } else {
-            updateStatus('Impossible de lister conf_files/ (auto-index ou API). Utilisez le bouton "fichier personnel".', 'info');
+            updateStatus('Unable to list conf_files/ (auto-index or API). Use the "personal file" button.', 'info');
         }
     } catch (e) {
         console.log(e);
-        updateStatus('Erreur lors du chargement des configurations', 'error');
+        updateStatus('Error loading configurations', 'error');
     }
 });
 
@@ -159,7 +153,7 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Rafraîchir la liste
+// Refresh list
 $('#refreshList').onclick = () => populateConfigSelect(true);
 
 // Configuration select
@@ -172,13 +166,13 @@ $('#configSelect').onchange = async (ev) => {
         return;
     }
     try {
-        updateStatus('Chargement de la configuration...', 'info');
+        updateStatus('Loading configuration...', 'info');
         const result = await loadConfigFromUrl(url);
         currentConfig = result.content;
         $('#upload').disabled = !isConnected;
-        updateStatus('Configuration chargée: ' + url.split('/').pop(), 'success');
+        updateStatus('Configuration loaded: ' + url.split('/').pop(), 'success');
 
-        // Extraire et afficher la description
+        // Extract and display description
         const description = extractConfigDescription(result.content);
         displayConfigDescription(description);
     } catch (e) {
@@ -189,7 +183,7 @@ $('#configSelect').onchange = async (ev) => {
     }
 };
 
-// Fichier perso
+// Personal file
 $('#configFile').onchange = async (ev) => {
     const f = ev.target.files?.[0];
     if (!f) {
@@ -199,14 +193,14 @@ $('#configFile').onchange = async (ev) => {
         return;
     }
     try {
-        updateStatus('Chargement du fichier...', 'info');
+        updateStatus('Loading file...', 'info');
         const result = await loadConfigFromFile(f);
         currentConfig = result.content;
-        $('#configSelect').value = ''; // désélectionner le menu conf_files
+        $('#configSelect').value = ''; // deselect conf_files menu
         $('#upload').disabled = !isConnected;
-        updateStatus('Fichier chargé: ' + result.filename, 'success');
+        updateStatus('File loaded: ' + result.filename, 'success');
 
-        // Extraire et afficher la description
+        // Extract and display description
         const description = extractConfigDescription(result.content);
         displayConfigDescription(description);
     } catch (e) {
@@ -220,23 +214,23 @@ $('#configFile').onchange = async (ev) => {
 /* ---------------------- Serial Communication ---------------------- */
 $('#connect').onclick = async () => {
     try {
-        updateStatus('Connexion en cours...', 'info');
+        updateStatus('Connecting...', 'info');
 
         const result = await connectSerial();
 
-        // Boucle de lecture spécifique au mode débutant
+        // Beginner mode specific read loop
         (async function readLoop() {
             try {
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) break;
-                    // Afficher les données reçues dans le terminal si visible
+                    // Display received data in terminal if visible
                     if (value && value.length > 0) {
                         addToTerminal(value, 'received');
                     }
                 }
             } catch (e) {
-                updateStatus('Erreur de lecture: ' + e.message, 'error');
+                updateStatus('Read error: ' + e.message, 'error');
             }
         })();
 
@@ -245,9 +239,9 @@ $('#connect').onclick = async () => {
         $('#disconnect').classList.remove('hidden');
         $('#disconnect').disabled = false;
         $('#upload').disabled = !currentConfig;
-        updateStatus(`Connecté @ ${result.baudRate} bauds`, 'success');
+        updateStatus(`Connected @ ${result.baudRate} baud`, 'success');
     } catch (e) {
-        updateStatus('Erreur de connexion: ' + (e?.message || e), 'error');
+        updateStatus('Connection error: ' + (e?.message || e), 'error');
     }
 };
 
@@ -261,24 +255,24 @@ $('#disconnect').onclick = async () => {
         $('#disconnect').disabled = true;
         $('#upload').disabled = true;
         showProgress(false);
-        updateStatus('Déconnecté', 'info');
+        updateStatus('Disconnected', 'info');
     } catch (e) {
-        updateStatus('Erreur de déconnexion: ' + (e?.message || e), 'error');
+        updateStatus('Disconnection error: ' + (e?.message || e), 'error');
     }
 };
 
 /* ---------------------- Upload Commands ---------------------- */
 $('#upload').onclick = async () => {
     if (!writer) {
-        updateStatus('Non connecté.', 'error');
+        updateStatus('Not connected.', 'error');
         return;
     }
     if (!currentConfig) {
-        updateStatus('Aucune configuration chargée.', 'error');
+        updateStatus('No configuration loaded.', 'error');
         return;
     }
     if (sendingBatch) {
-        updateStatus('Envoi déjà en cours. Patientez...', 'info');
+        updateStatus('Sending already in progress. Please wait...', 'info');
         return;
     }
 
@@ -287,7 +281,7 @@ $('#upload').onclick = async () => {
         .filter(s => s.length && !s.startsWith('#') && !s.startsWith('//') && !s.startsWith(';'));
 
     if (!lines.length) {
-        updateStatus('Aucune commande valide dans la configuration.', 'error');
+        updateStatus('No valid commands in configuration.', 'error');
         return;
     }
 
@@ -299,36 +293,36 @@ $('#upload').onclick = async () => {
     showProgress(true);
 
     try {
-        updateStatus(`Envoi de ${lines.length} commande(s)...`, 'info');
-        updateProgress(0, 'Démarrage...');
+        updateStatus(`Sending ${lines.length} command(s)...`, 'info');
+        updateProgress(0, 'Starting...');
 
-        // Effacer le terminal et ajouter un message de début
+        // Clear terminal and add start message
         clearTerminal();
-        addToTerminal(`=== Début de la configuration (${lines.length} commandes) ===`);
+        addToTerminal(`=== Starting configuration (${lines.length} commands) ===`);
 
         for (let i = 0; i < lines.length; i++) {
             const cmd = lines[i];
             await writer.write(cmd + eol);
 
-            // Afficher la commande envoyée dans le terminal
+            // Display sent command in terminal
             addToTerminal(cmd + eol.replace(/\n/g, '\\n').replace(/\r/g, '\\r'), 'sent');
 
             const progress = ((i + 1) / lines.length) * 100;
-            updateProgress(progress, `Commande ${i + 1}/${lines.length}: ${cmd.substring(0, 30)}${cmd.length > 30 ? '...' : ''}`);
+            updateProgress(progress, `Command ${i + 1}/${lines.length}: ${cmd.substring(0, 30)}${cmd.length > 30 ? '...' : ''}`);
 
             if (i < lines.length - 1) {
                 await sleep(delaySec * 1000);
             }
         }
 
-        updateProgress(100, 'Configuration envoyée avec succès!');
-        updateStatus('Configuration envoyée avec succès!', 'success');
-        addToTerminal('=== Fin de la configuration ===');
+        updateProgress(100, 'Configuration sent successfully!');
+        updateStatus('Configuration sent successfully!', 'success');
+        addToTerminal('=== End of configuration ===');
 
-        // Masquer la barre de progression après 3 secondes
+        // Hide progress bar after 3 seconds
         setTimeout(() => showProgress(false), 3000);
     } catch (e) {
-        updateStatus('Erreur lors de l\'envoi: ' + (e?.message || e), 'error');
+        updateStatus('Error during sending: ' + (e?.message || e), 'error');
         showProgress(false);
     } finally {
         sendingBatch = false;
@@ -340,7 +334,7 @@ $('#save').onclick = async () => {
     try {
         const result = await sendSaveConfig();
         addToTerminal(result.command.replace(/\n/g, '\\n').replace(/\r/g, '\\r'), 'sent');
-        updateStatus('Commande SAVECONFIG envoyée', 'success');
+        updateStatus('SAVECONFIG command sent', 'success');
     } catch (e) {
         updateStatus(e.message, 'error');
     }
