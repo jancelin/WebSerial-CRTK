@@ -1,8 +1,8 @@
 /* ========================================
-   Centipede Web Serial - Styles communs
-   ======================================== */
+  Centipede Web Serial - Common styles
+  ======================================== */
 
-/* Variables CSS communes */
+/* Common CSS variables */
 :root {
   --primary: #0b57d0;
   --success: #28a745;
@@ -12,7 +12,7 @@
   --dark: #343a40;
 }
 
-/* Styles de base communs */
+/* Common base styles */
 body {
   font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   margin: 0 auto;
@@ -25,7 +25,7 @@ h1 {
   color: var(--dark);
 }
 
-/* Logo et branding */
+/* Logo and branding */
 .brand {
   display: flex;
   align-items: center;
@@ -38,7 +38,7 @@ h1 {
   width: auto;
 }
 
-/* Mode Switch Styles - Communs aux deux versions */
+/* Mode Switch Styles - Common to both versions */
 .mode-switch-container {
   position: fixed;
   top: 20px;
@@ -113,7 +113,7 @@ input:checked + .slider:before {
   color: var(--primary);
 }
 
-/* Boutons communs */
+/* Common buttons */
 button {
   font-size: 16px;
   padding: 12px 24px;
@@ -147,7 +147,7 @@ button[disabled] {
   background: #218838;
 }
 
-/* Éléments de formulaire communs */
+/* Common form elements */
 select,
 input[type="number"],
 input[type="file"] {
@@ -166,7 +166,7 @@ input:focus {
   border-color: var(--primary);
 }
 
-/* Footer commun */
+/* Common footer */
 footer {
   margin-top: auto;
   padding: 16px 0;
@@ -192,7 +192,7 @@ footer svg {
   height: 16px;
 }
 
-/* Classes utilitaires communes */
+/* Common utility classes */
 .hidden {
   display: none;
 }
@@ -201,7 +201,7 @@ footer svg {
   opacity: 0.7;
 }
 
-/* Responsive adjustments communes */
+/* Common responsive adjustments */
 @media (max-width: 768px) {
   .mode-switch-container {
     position: relative;

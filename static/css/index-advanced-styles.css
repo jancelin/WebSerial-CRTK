@@ -1,6 +1,6 @@
 /* ========================================
-   Centipede Web Serial - Styles pour index_advanced.html (mode avancé)
-   ======================================== */
+  Centipede Web Serial - Styles for index_advanced.html (advanced mode)
+  ======================================== */
 
 :root {
   --pad: 12px;
@@ -29,7 +29,7 @@ h1 {
   vertical-align: middle;
 }
 
-/* Mode switch spécifique pour la page avancée */
+/* Mode switch specific to the advanced page */
 .slider {
   background-color: var(--primary);
 }

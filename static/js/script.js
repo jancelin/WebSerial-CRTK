@@ -1,60 +1,60 @@
 /* ========================================
-   Centipede Web Serial - JavaScript commun
+   Centipede Web Serial - Common JavaScript
    ======================================== */
 
-/* Variables globales communes */
+/* Common global variables */
 let port, reader, writer;
 let textDecoder, textEncoder;
 let readableStreamClosed, writableStreamClosed;
 let sendingBatch = false;
 
-/* Helpers UI communs */
+/* Common UI helpers */
 const $ = s => document.querySelector(s);
 
 /**
- * Vérifie le support de Web Serial
+ * Checks for Web Serial support
  */
 function ensureWebSerial() {
     if (!('serial' in navigator)) {
-        throw new Error('Web Serial non supporté dans ce navigateur. Utilisez Chrome/Chromium desktop.');
+        throw new Error('Web Serial not supported in this browser. Use Chrome/Chromium desktop.');
     }
 }
 
 /**
- * Fonction sleep pour les délais
+ * Sleep function for delays
  */
 function sleep(ms) {
     return new Promise(r => setTimeout(r, ms));
 }
 
 /**
- * Normalise le texte (supprime BOM, unifie les fins de ligne)
+ * Normalizes text (removes BOM, unifies line endings)
  */
 function normalizeText(t) {
     return t.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim() + '\n';
 }
 
 /**
- * Récupère la fin de ligne sélectionnée
+ * Gets the selected end of line character
  */
 function getEOL() {
     return eval('`' + $('#eol').value + '`');
 }
 
 /**
- * Fonction de connexion Web Serial commune
+ * Common Web Serial connection function
  */
 async function connectSerial() {
     try {
         ensureWebSerial();
         const baudRate = parseInt($('#baud').value, 10) || 115200;
 
-        // Filtres USB : FTDI(0x0403), CP210x(0x10C4), CH340(0x1A86)
+        // USB filters: FTDI(0x0403), CP210x(0x10C4), CH340(0x1A86)
         const filters = [{ usbVendorId: 0x0403 }, { usbVendorId: 0x10C4 }, { usbVendorId: 0x1A86 }];
         port = await navigator.serial.requestPort({ filters });
         await port.open({ baudRate });
 
-        // Streams enc/dec et "pipes" avec suivi pour fermeture propre
+        // Encoder/decoder streams and "pipes" with tracking for proper closure
         textDecoder = new TextDecoderStream();
         readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
         reader = textDecoder.readable.getReader();
@@ -70,29 +70,29 @@ async function connectSerial() {
 }
 
 /**
- * Fonction de déconnexion Web Serial commune
+ * Common Web Serial disconnection function
  */
 async function disconnectSerial() {
     try {
         if (!port) return;
         if (sendingBatch) {
-            console.log('Envoi en cours — attente avant déconnexion…');
+            console.log('Sending in progress — waiting before disconnection…');
         }
 
-        // 1) Arrêter proprement la lecture
+        // 1) Stop reading properly
         try { await reader?.cancel(); } catch { }
         try { await readableStreamClosed?.catch(() => { }); } catch { }
         reader?.releaseLock?.();
 
-        // 2) Fermer proprement l'écriture
+        // 2) Close writing properly
         try { await writer?.close(); } catch { }
         try { await writableStreamClosed?.catch(() => { }); } catch { }
         writer?.releaseLock?.();
 
-        // 3) Fermer le port
+        // 3) Close the port
         await port.close();
 
-        // 4) Nettoyage d'état
+        // 4) State cleanup
         port = undefined; reader = undefined; writer = undefined;
         textDecoder = textEncoder = undefined;
         readableStreamClosed = writableStreamClosed = undefined;
@@ -103,56 +103,56 @@ async function disconnectSerial() {
     }
 }
 
-/* ---------------------- Listing des fichiers de conf ---------------------- */
-// Configuration GitHub
+/* ---------------------- Configuration files listing ---------------------- */
+// GitHub configuration
 const GH_OWNER = 'jancelin';
 const GH_REPO = 'WebSerial-CRTK';
 const GH_BRANCH_CANDIDATES = ['gh-pages', 'main', 'master'];
 const ALLOWED_EXT = /\.(txt|cfg|conf|ini|nmea|csv|log)$/i;
 
 /**
- * Peuple la liste déroulante des configurations
+ * Populates the configuration dropdown list
  */
 async function populateConfigSelect(manual) {
     const sel = $('#configSelect');
-    sel.innerHTML = '<option value="">— Choisir un fichier (conf_files) —</option>';
+    sel.innerHTML = '<option value="">— Choose a file (conf_files) —</option>';
 
-    // 0) Tentative: fichier manifeste optionnel (si tu ajoutes conf_files/manifest.json)
-    //    Format attendu: ["Feasycom_BT836b.txt","UM980_rover_fullNMEA_5hz_BT921600bd_UP_STABLE.txt", ...]
+    // 0) Attempt: optional manifest file (if you add conf_files/manifest.json)
+    //    Expected format: ["Feasycom_BT836b.txt","UM980_rover_fullNMEA_5hz_BT921600bd_UP_STABLE.txt", ...]
     const manifestFiles = await tryFetchManifestJSON();
     if (manifestFiles && manifestFiles.length) {
         options = manifestFiles.map(n => ({ name: n, url: 'conf_files/' + n }))
         addOptions(sel, options);
-        if (typeof logLine === 'function') logLine(`✓ ${manifestFiles.length} fichier(s) via index.json.`);
+        if (typeof logLine === 'function') logLine(`✓ ${manifestFiles.length} file(s) via index.json.`);
         return [options, "manifest"];
     }
 
-    // 1) En local: listing HTML (python -m http.server)
+    // 1) Local: HTML listing (python -m http.server)
     const localFiles = await tryFetchLocalIndex();
     if (localFiles && localFiles.length) {
         options = localFiles.map(n => ({ name: n, url: 'conf_files/' + n }))
         addOptions(sel, options);
-        if (typeof logLine === 'function') logLine(`✓ ${localFiles.length} fichier(s) détecté(s) (local).`);
+        if (typeof logLine === 'function') logLine(`✓ ${localFiles.length} file(s) detected (local).`);
         return [options, "local"];
     }
 
-    // 2) Fallback GitHub API (utile sur GitHub Pages)
+    // 2) GitHub API fallback (useful on GitHub Pages)
     const ghFiles = await tryFetchGitHubAPI();
     if (ghFiles && ghFiles.length) {
-        addOptions(sel, ghFiles); // ghFiles contient {name, url:download_url}
-        if (typeof logLine === 'function') logLine(`✓ ${ghFiles.length} fichier(s) via GitHub API.`);
+        addOptions(sel, ghFiles); // ghFiles contains {name, url:download_url}
+        if (typeof logLine === 'function') logLine(`✓ ${ghFiles.length} file(s) via GitHub API.`);
         return [ghFiles, "github"];
     }
 
     if (typeof logLine === 'function') {
-        logLine(manual ? 'ℹ️ Aucun fichier détecté.' :
-            'ℹ️ Impossible de lister conf_files/ (auto-index ou API). Utilisez le bouton "fichier personnel" ou ajoutez conf_files/index.json.');
+        logLine(manual ? 'ℹ️ No files detected.' :
+            'ℹ️ Unable to list conf_files/ (auto-index or API). Use the "personal file" button or add conf_files/index.json.');
     }
 }
 
 
 /**
- * Ajoute les options au select
+ * Adds options to the select element
  */
 function addOptions(selectEl, items, useCleanNames = true) {
     items
@@ -163,7 +163,7 @@ function addOptions(selectEl, items, useCleanNames = true) {
             opt.value = it.url;
 
             if (useCleanNames) {
-                // Nettoyer le nom : supprimer l'extension et remplacer _ par des espaces
+                // Clean the name: remove extension and replace _ with spaces
                 const cleanName = it.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' ');
                 opt.textContent = cleanName;
             } else {
@@ -175,7 +175,7 @@ function addOptions(selectEl, items, useCleanNames = true) {
 }
 
 /**
- * Tente de récupérer le manifeste JSON
+ * Attempts to fetch the JSON manifest
  */
 async function tryFetchManifestJSON() {
     try {
@@ -187,7 +187,7 @@ async function tryFetchManifestJSON() {
 }
 
 /**
- * Tente de récupérer l'index local
+ * Attempts to fetch the local index
  */
 async function tryFetchLocalIndex() {
     try {
@@ -204,7 +204,7 @@ async function tryFetchLocalIndex() {
     } catch { return null; }
 }
 /**
- * Tente de récupérer via l'API GitHub
+ * Attempts to fetch via GitHub API
  */
 async function tryFetchGitHubAPI() {
     for (const branch of GH_BRANCH_CANDIDATES) {
@@ -218,13 +218,13 @@ async function tryFetchGitHubAPI() {
                 .filter(it => ALLOWED_EXT.test(it.name))
                 .map(it => ({ name: it.name, url: it.download_url }));
             if (files.length) return files;
-        } catch { /* essaye la branche suivante */ }
+        } catch { /* try next branch */ }
     }
     return null;
 }
 
 /**
- * Charge un fichier de configuration depuis une URL
+ * Loads a configuration file from a URL
  */
 async function loadConfigFromUrl(url) {
     try {
@@ -233,40 +233,40 @@ async function loadConfigFromUrl(url) {
         const txt = await resp.text();
         return { content: normalizeText(txt), success: true };
     } catch (e) {
-        throw new Error('Impossible de charger ' + url + ' : ' + (e?.message || e));
+        throw new Error('Unable to load ' + url + ' : ' + (e?.message || e));
     }
 }
 
 /**
- * Charge un fichier de configuration depuis un fichier local
+ * Loads a configuration file from a local file
  */
 async function loadConfigFromFile(file) {
     try {
         const txt = await file.text();
         return { content: normalizeText(txt), success: true, filename: file.name };
     } catch (e) {
-        throw new Error('Erreur lecture fichier: ' + (e?.message || e));
+        throw new Error('File reading error: ' + (e?.message || e));
     }
 }
 
 /**
- * Envoi de la commande SAVECONFIG
+ * Sends the SAVECONFIG command
  */
 async function sendSaveConfig() {
     if (!writer) {
-        throw new Error('Non connecté.');
+        throw new Error('Not connected.');
     }
     try {
         const command = 'SAVECONFIG' + getEOL();
         await writer.write(command);
         return { success: true, command: command };
     } catch (e) {
-        throw new Error('Erreur SAVECONFIG: ' + (e?.message || e));
+        throw new Error('SAVECONFIG error: ' + (e?.message || e));
     }
 }
 
 /**
- * Fonction d'échappement HTML
+ * HTML escaping function
  */
 function escapeHtml(text) {
     const div = document.createElement('div');
@@ -275,7 +275,7 @@ function escapeHtml(text) {
 }
 
 /**
- * Convertit les URLs en liens cliquables
+ * Converts URLs to clickable links
  */
 function convertUrlsToLinks(text) {
     const urlRegex = /(https?:\/\/[^\s<>"]+)/gi;
@@ -295,7 +295,7 @@ function convertUrlsToLinks(text) {
 }
 
 /**
- * Extrait la description depuis les commentaires du fichier
+ * Extracts description from file comments
  */
 function extractConfigDescription(content) {
     if (!content) return null;
@@ -306,22 +306,22 @@ function extractConfigDescription(content) {
         details: []
     };
 
-    // Recherche des tags #title: et #content: dans les commentaires
+    // Search for #title: and #content: tags in comments
     for (let i = 0; i < Math.min(30, lines.length); i++) {
         const line = lines[i].trim();
 
-        // Ignorer les lignes vides
+        // Ignore empty lines
         if (!line) continue;
 
-        // Si c'est un commentaire (# ou //)
+        // If it's a comment (# or //)
         if (line.startsWith('#') || line.startsWith('//')) {
             const comment = line.replace(/^(#|\/\/)\s*/, '');
 
-            // Rechercher le tag title:
+            // Search for title: tag
             if (comment.toLowerCase().startsWith('title:')) {
                 description.title = comment.substring(6).trim();
             }
-            // Rechercher le tag content:
+            // Search for content: tag
             else if (comment.toLowerCase().startsWith('content:')) {
                 const content = comment.substring(8).trim();
                 if (content.length > 0) {
@@ -329,7 +329,7 @@ function extractConfigDescription(content) {
                 }
             }
         } else {
-            // Si on rencontre une ligne non-commentaire et qu'on a déjà des données, on arrête
+            // If we encounter a non-comment line and already have data, stop
             if (description.title || description.details.length > 0) {
                 break;
             }
@@ -339,27 +339,27 @@ function extractConfigDescription(content) {
     return (description.title || description.details.length) ? description : null;
 }
 
-/* ---------------------- Gestion du mode switch ---------------------- */
+/* ---------------------- Mode switch management ---------------------- */
 /**
- * Initialise le mode switch commun
+ * Initializes the common mode switch
  */
 function initializeModeSwitch() {
     document.addEventListener('DOMContentLoaded', () => {
         const modeToggle = $('#modeToggle');
 
-        // Déterminer si on est en mode avancé en fonction de la page actuelle
+        // Determine if we're in advanced mode based on current page
         const isAdvancedMode = window.location.pathname.includes('index_advanced.html');
 
         if (modeToggle) {
             modeToggle.onchange = () => {
                 if (isAdvancedMode) {
-                    // On est sur la page avancée, si décoché, aller vers le mode débutant
+                    // We're on the advanced page, if unchecked, go to beginner mode
                     if (!modeToggle.checked) {
                         localStorage.setItem('centipede-mode', 'beginner');
                         window.location.href = 'index.html';
                     }
                 } else {
-                    // On est sur la page débutant, si coché, aller vers le mode avancé
+                    // We're on the beginner page, if checked, go to advanced mode
                     if (modeToggle.checked) {
                         localStorage.setItem('centipede-mode', 'advanced');
                         window.location.href = 'index_advanced.html';
@@ -370,5 +370,5 @@ function initializeModeSwitch() {
     });
 }
 
-// Initialiser le mode switch
+// Initialize the mode switch
 initializeModeSwitch();

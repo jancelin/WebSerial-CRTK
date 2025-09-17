@@ -1,8 +1,8 @@
 /* ========================================
-   Centipede Web Serial - JavaScript pour index_advanced.html (mode avancé)
-   ======================================== */
+    Centipede Web Serial - JavaScript for index_advanced.html (advanced mode)
+    ======================================== */
 
-// Variables spécifiques au mode avancé
+// Variables specific to advanced mode
 const logEl = $('#log');
 
 /* ---------------------- UI Functions ---------------------- */
@@ -17,16 +17,16 @@ function clearLog() {
 
 /* ---------------------- Event Handlers ---------------------- */
 document.addEventListener('DOMContentLoaded', async () => {
-    // Initialiser la liste des configurations
+    // Initialize configuration list
     try {
         const result = await populateConfigSelect(false);
         if (result[0].length > 0) {
-            logLine(`✓ ${result[0].length} fichier(s) via ${result[1]}.`);
+            logLine(`✓ ${result[0].length} file(s) via ${result[1]}.`);
         } else {
-            logLine('ℹ️ Impossible de lister conf_files/ (auto-index ou API). Utilisez le bouton "fichier personnel" ou ajoutez conf_files/index.json.');
+            logLine('ℹ️ Unable to list conf_files/ (auto-index or API). Use the "personal file" button or add conf_files/index.json.');
         }
     } catch (e) {
-        logLine('✗ Erreur lors du chargement des configurations');
+        logLine('✗ Error loading configurations');
     }
 });
 
@@ -46,15 +46,15 @@ $('#configSelect').onchange = async (ev) => {
     }
 };
 
-// Fichier perso
+// Personal file
 $('#configFile').onchange = async (ev) => {
     const f = ev.target.files?.[0];
     if (!f) return;
     try {
         const result = await loadConfigFromFile(f);
         $('#cmd').value = result.content;
-        $('#configSelect').value = ''; // désélectionner le menu conf_files
-        logLine('✓ Fichier chargé: ' + result.filename);
+        $('#configSelect').value = ''; // deselect conf_files menu
+        logLine('✓ File loaded: ' + result.filename);
     } catch (e) {
         logLine('✗ ' + e.message);
     }
@@ -65,7 +65,7 @@ $('#connect').onclick = async () => {
     try {
         const result = await connectSerial();
 
-        // Boucle de lecture spécifique au mode avancé
+        // Read loop specific to advanced mode
         (async function readLoop() {
             try {
                 while (true) {
@@ -74,15 +74,15 @@ $('#connect').onclick = async () => {
                     if (value) logLine(value);
                 }
             } catch (e) {
-                logLine('✗ Lecture: ' + e.message);
+                logLine('✗ Read error: ' + e.message);
             }
         })();
 
         $('#connect').disabled = true;
         $('#disconnect').disabled = false;
-        logLine('✓ Connecté @ ' + result.baudRate + ' bauds');
+        logLine('✓ Connected @ ' + result.baudRate + ' baud');
     } catch (e) {
-        logLine('✗ Erreur connexion: ' + (e?.message || e));
+        logLine('✗ Connection error: ' + (e?.message || e));
     }
 };
 
@@ -92,23 +92,23 @@ $('#disconnect').onclick = async () => {
 
         $('#connect').disabled = false;
         $('#disconnect').disabled = true;
-        logLine('⏏️ Déconnecté');
+        logLine('⏏️ Disconnected');
     } catch (e) {
-        logLine('✗ Déconnexion: ' + (e?.message || e));
+        logLine('✗ Disconnection: ' + (e?.message || e));
     }
 };
 
 /* ---------------------- Send Commands ---------------------- */
 $('#send').onclick = async () => {
-    if (!writer) { logLine('✗ Non connecté.'); return; }
-    if (sendingBatch) { logLine('⌛ Déjà en cours. Patiente…'); return; }
+    if (!writer) { logLine('✗ Not connected.'); return; }
+    if (sendingBatch) { logLine('⌛ Already in progress. Please wait…'); return; }
 
     const raw = $('#cmd').value || '';
     let lines = raw.split('\n')
         .map(s => s.trim())
         .filter(s => s.length && !s.startsWith('#') && !s.startsWith('//') && !s.startsWith(';'));
 
-    if (!lines.length) { logLine('ℹ️ Rien à envoyer.'); return; }
+    if (!lines.length) { logLine('ℹ️ Nothing to send.'); return; }
 
     const delaySec = Math.max(0, parseFloat($('#delay').value || '5') || 5);
     const eol = getEOL();
@@ -116,16 +116,16 @@ $('#send').onclick = async () => {
     sendingBatch = true;
     $('#send').disabled = true;
     try {
-        logLine(`▶️ Envoi de ${lines.length} commande(s), délai ${delaySec}s…`);
+        logLine(`▶️ Sending ${lines.length} command(s), delay ${delaySec}s…`);
         for (let i = 0; i < lines.length; i++) {
             const cmd = lines[i];
             await writer.write(cmd + eol);
             logLine(`→ [${i + 1}/${lines.length}] ${cmd}`);
             if (i < lines.length - 1) await sleep(delaySec * 1000);
         }
-        logLine('✅ Lot terminé.');
+        logLine('✅ Batch completed.');
     } catch (e) {
-        logLine('✗ Envoi interrompu: ' + (e?.message || e));
+        logLine('✗ Send interrupted: ' + (e?.message || e));
     } finally {
         sendingBatch = false;
         $('#send').disabled = false;
