@@ -1,5 +1,5 @@
 /* ========================================
-   Centipede Web Serial - Common JavaScript
+   Centipede-RTK Web Serial - Common JavaScript
    ======================================== */
 
 /* Common global variables */

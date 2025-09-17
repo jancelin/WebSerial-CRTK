@@ -1,5 +1,5 @@
 /* ========================================
-    Centipede Web Serial - JavaScript for index_advanced.html (advanced mode)
+    Centipede-RTK Web Serial - JavaScript for index_advanced.html (advanced mode)
     ======================================== */
 
 // Variables specific to advanced mode

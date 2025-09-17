@@ -1,5 +1,5 @@
 /* ========================================
-   Centipede Web Serial - JavaScript for index.html (beginner mode)
+   Centipede-RTK Web Serial - JavaScript for index.html (beginner mode)
    ======================================== */
 
 // Variables specific to beginner mode
