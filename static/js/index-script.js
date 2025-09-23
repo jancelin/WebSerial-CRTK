@@ -5,6 +5,20 @@
 // Set config source for this page
 window.CONFIG_SOURCE = 'user';
 
+// bascule Débutant -> Avancé
+document.addEventListener('DOMContentLoaded', () => {
+  const sw = document.getElementById('modeSwitch');
+  if (!sw) return;
+  // Sur la page Débutant, le toggle doit être en position "Débutant" (OFF)
+  sw.checked = false;
+  sw.addEventListener('change', () => {
+    if (sw.checked) {
+      // Aller vers l’UI avancée
+      window.location.href = 'index_advanced.html';
+    }
+  });
+});
+
 // Variables specific to beginner mode
 let currentConfig = '';
 let isConnected = false;

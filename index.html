@@ -14,12 +14,12 @@
   <!-- Mode Switch -->
   <div class="mode-switch-container">
     <div class="mode-switch">
-      <span class="mode-label active" id="beginnerLabel">Débutant</span>
+      <span>Débutant</span>
       <label class="switch">
-        <input type="checkbox" id="modeToggle">
-        <span class="slider"></span>
+        <input type="checkbox" id="modeSwitch">
+        <span class="slider round"></span>
       </label>
-      <span class="mode-label" id="advancedLabel">Avancé</span>
+      <span>Avancé</span>
     </div>
   </div>
 
@@ -30,18 +30,11 @@
     </h1>
 
     <div class="main-container">
-      <!-- Boutons principaux -->
+      <!-- Boutons principaux + Baud -->
       <div class="control-group">
         <div class="control-row">
           <button id="connect" class="btn btn-primary" style="flex: 1;">🔌 Connecter</button>
           <button id="disconnect" class="btn btn-primary hidden" disabled style="flex: 1;">⏏️ Déconnecter</button>
-          <button id="upload" class="btn btn-success" disabled style="flex: 1;">📤 Téléverser</button>
-        </div>
-      </div>
-
-      <!-- Contrôles de configuration -->
-      <div class="control-group">
-        <div class="control-row">
           <div style="flex: 1; height : 75px;">
             <label>Vitesse de transmission</label>
             <select id="baud">
@@ -59,6 +52,12 @@
               <option>921600</option>
             </select>
           </div>
+        </div>
+      </div>
+
+      <!-- Contrôles de configuration -->
+      <div class="control-group">
+        <div class="control-row">
           <div style="flex: 1; height : 75px;">
             <label>Configurations</label>
             <div class="file-group">
@@ -82,6 +81,11 @@
         <div class="config-description" id="configDescription">
           <!-- Description dynamique -->
         </div>
+      </div>
+
+      <!-- Téléverser (déplacé juste après la description) -->
+      <div class="control-group" style="margin-top: 8px;">
+        <button id="upload" class="btn btn-success" disabled style="width:100%;">📤 Téléverser</button>
       </div>
 
       <!-- Barre de progression -->
@@ -114,9 +118,10 @@
         <div class="control-group">
           <label>Fin de ligne</label>
           <select id="eol">
-            <option value="\r\n" selected>CRLF</option>
-            <option value="\n">LF</option>
-            <option value="\r">CR</option>
+            <option value="CRLF">CRLF</option>
+            <option value="LF" selected>LF</option>
+            <option value="CR">CR</option>
+            <option value="NONE">Aucun</option>
           </select>
         </div>
 
@@ -142,7 +147,7 @@
     <a href="https://github.com/jancelin/WebSerial-CRTK" target="_blank" rel="noopener">
       <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
         <path fill="currentColor"
-          d="M8 .2a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.34c-2.25.49-2.72-1.08-2.72-1.08-.37-.95-.9-1.2-.9-1.2-.74-.51.06-.5.06-.5.82.06 1.25.85 1.25.85.73 1.24 1.92.88 2.39.67.07-.53.28-.88.5-1.08-1.8-.2-3.7-.9-3.7-4a3.14 3.14 0 0 1 .84-2.18 2.9 2.9 0 0 1 .08-2.15s.68-.22 2.22.83a7.6 7.6 0 0 1 4.05 0c1.54-1.05 2.22-.83 2.22-.83.45 1.08.17 1.89.09 2.09a3.13 3.13 0 0 1 .84 2.18c0 3.11-1.9 3.8-3.71 4 .29.25.54.73.54 1.48v2.2c0 .21.15.45.55.38A8 8 0 0 0 8 .2Z" />
+          d="M8 .2a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.3...4 .29.25.54.73.54 1.48v2.2c0 .21.15.45.55.38A8 8 0 0 0 8 .2Z" />
       </svg>
       github.com/jancelin/Webserial-CRTK
     </a>
@@ -153,3 +158,4 @@
 </body>
 
 </html>
+

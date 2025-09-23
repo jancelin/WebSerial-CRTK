@@ -5,6 +5,20 @@
 // Set config source for this page
 window.CONFIG_SOURCE = 'advanced';
 
+// Bascule Avancé -> Débutant
+document.addEventListener('DOMContentLoaded', () => {
+  const sw = document.getElementById('modeSwitch');
+  if (!sw) return;
+  // Sur la page Avancé, le toggle doit être en position "Avancé" (ON)
+  sw.checked = true;
+  sw.addEventListener('change', () => {
+    if (!sw.checked) {
+      // Revenir vers l’UI débutant
+      window.location.href = 'index.html';
+    }
+  });
+});
+
 // Variables specific to advanced mode
 const logEl = $('#log');
 
