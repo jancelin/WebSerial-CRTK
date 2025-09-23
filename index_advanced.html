@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Centipede-RTK Web Serial</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="static/logo.png" />
+    <link rel="stylesheet" href="static/css/styles.css">
+    <link rel="stylesheet" href="static/css/index-advanced-styles.css">
+</head>
+
+<body>
+    <!-- Mode Switch -->
+    <div class="mode-switch-container">
+        <div class="mode-switch">
+            <span class="mode-label" id="beginnerLabel">Débutant</span>
+            <label class="switch">
+                <input type="checkbox" id="modeToggle" checked>
+                <span class="slider"></span>
+            </label>
+            <span class="mode-label active" id="advancedLabel">Avancé</span>
+        </div>
+    </div>
+
+    <h1 class="brand">
+        <img src="static/logo.png" alt="Logo" class="logo" />
+        Centipede-RTK Web Serial
+    </h1>
+
+    <div class="row">
+        <button id="connect">🔌 Connecter</button>
+        <button id="disconnect" disabled>⏏️ Déconnecter</button>
+
+        <label>Baud
+            <select id="baud">
+                <option>4800</option>
+                <option>9600</option>
+                <option>19200</option>
+                <option>28800</option>
+                <option>38400</option>
+                <option>57600</option>
+                <option>76800</option>
+                <option selected>115200</option>
+                <option>230400</option>
+                <option>460800</option>
+                <option>576000</option>
+                <option>921600</option>
+            </select>
+        </label>
+
+        <label>Fin de ligne
+            <select id="eol">
+                <option value="\r\n" selected>CRLF</option>
+                <option value="\n">LF</option>
+                <option value="\r">CR</option>
+            </select>
+        </label>
+
+        <label>Délai entre commandes (s)
+            <input id="delay" type="number" min="0" step="0.1" value="5">
+        </label>
+    </div>
+
+    <div class="row">
+        <label>Fichier de configuration
+            <select id="configSelect">
+                <option value="">— Choisir un fichier (conf_files) —</option>
+            </select>
+            <button id="refreshList" class="inline-btn" title="Rafraîchir la liste">↻</button>
+        </label>
+
+        <label>ou charger un fichier personnel
+            <input id="configFile" type="file" accept=".txt,.cfg,.conf,.ini,.log,.nmea,.csv,.*" />
+        </label>
+    </div>
+
+    <textarea id="cmd"
+        placeholder="Collez/éditez vos commandes ici (une par ligne). Les lignes vides et celles commençant par #, // ou ; seront ignorées."></textarea>
+
+    <div class="toolbar">
+        <button id="send">➡️ Envoyer (multi-lignes)</button>
+        <button id="save">💾 SAVECONFIG</button>
+        <button id="clear">🧹 Effacer le log</button>
+        <span class="muted">Astuce : gardez CRLF si requis par le firmware.</span>
+    </div>
+
+    <pre id="log">— Log —</pre>
+
+    <footer>
+        <span>🄯 2025 by Centipede-RTK</span>
+        <a href="https://github.com/jancelin/WebSerial-CRTK" target="_blank" rel="noopener">
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path fill="currentColor"
+                    d="M8 .2a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.34c-2.25.49-2.72-1.08-2.72-1.08-.37-.95-.9-1.2-.9-1.2-.74-.51.06-.5.06-.5.82.06 1.25.85 1.25.85.73 1.24 1.92.88 2.39.67.07-.53.28-.88.5-1.08-1.8-.2-3.7-.9-3.7-4a3.14 3.14 0 0 1 .84-2.18 2.9 2.9 0 0 1 .08-2.15s.68-.22 2.22.83a7.6 7.6 0 0 1 4.05 0c1.54-1.05 2.22-.83 2.22-.83.45 1.08.17 1.89.09 2.09a3.13 3.13 0 0 1 .84 2.18c0 3.11-1.9 3.8-3.71 4 .29.25.54.73.54 1.48v2.2c0 .21.15.45.55.38A8 8 0 0 0 8 .2Z" />
+            </svg>
+            github.com/jancelin/Webserial-CRTK
+        </a>
+    </footer>
+
+    <script src="static/js/script.js"></script>
+    <script src="static/js/index-advanced-script.js"></script>
+</body>
+
+</html>
