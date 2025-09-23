@@ -2,6 +2,9 @@
    Centipede-RTK Web Serial - JavaScript for index.html (beginner mode)
    ======================================== */
 
+// Set config source for this page
+window.CONFIG_SOURCE = 'user';
+
 // Variables specific to beginner mode
 let currentConfig = '';
 let isConnected = false;

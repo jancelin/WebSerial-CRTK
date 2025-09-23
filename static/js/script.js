@@ -109,65 +109,81 @@ const GH_OWNER = 'jancelin';
 const GH_REPO = 'WebSerial-CRTK';
 const GH_BRANCH_CANDIDATES = ['gh-pages', 'main', 'master'];
 const ALLOWED_EXT = /\.(txt|cfg|conf|ini|nmea|csv|log)$/i;
+// Resolve base folder depending on interface ---
+function getConfigBase() {
+    const mode = (window.CONFIG_SOURCE === 'advanced') ? 'advanced' : 'user';
+    return `conf_files/${mode}`;
+}
 
 /**
  * Populates the configuration dropdown list
  */
 async function populateConfigSelect(manual) {
     const sel = $('#configSelect');
-    sel.innerHTML = '<option value="">— Choose a file (conf_files) —</option>';
+    const mode = (window.CONFIG_SOURCE === 'advanced') ? 'advanced' : 'user';
+    const base = getConfigBase();
 
-    // 0) Attempt: optional manifest file (if you add conf_files/manifest.json)
-    //    Expected format: ["Feasycom_BT836b.txt","UM980_rover_fullNMEA_5hz_BT921600bd_UP_STABLE.txt", ...]
-    const manifestFiles = await tryFetchManifestJSON();
-    if (manifestFiles && manifestFiles.length) {
-        options = manifestFiles.map(n => ({ name: n, url: 'conf_files/' + n }))
-        addOptions(sel, options);
-        if (typeof logLine === 'function') logLine(`✓ ${manifestFiles.length} file(s) via index.json.`);
-        return [options, "manifest"];
+    sel.innerHTML = mode === 'advanced'
+        ? '<option value="">— Choisir un fichier (conf_files/advanced) —</option>'
+        : '<option value="">— Choisir une configuration (débutant) —</option>';
+
+    // Beginner mode: prefer manifest (labels + emoji)
+    if (mode === 'user') {
+        const manifestOptions = await tryFetchManifestJSON();
+        if (manifestOptions && manifestOptions.length) {
+            addOptions(sel, manifestOptions, /*useCleanNames=*/false);
+            if (typeof updateStatus === 'function') updateStatus(`${manifestOptions.length} configuration(s) via manifest`, 'success');
+            else if (typeof logLine === 'function') logLine(`✓ ${manifestOptions.length} configuration(s) via manifest.`);
+            return [manifestOptions, "manifest"];
+        }
     }
 
-    // 1) Local: HTML listing (python -m http.server)
+    // Local index
     const localFiles = await tryFetchLocalIndex();
     if (localFiles && localFiles.length) {
-        options = localFiles.map(n => ({ name: n, url: 'conf_files/' + n }))
-        addOptions(sel, options);
-        if (typeof logLine === 'function') logLine(`✓ ${localFiles.length} file(s) detected (local).`);
+        const options = localFiles.map(n => ({ name: n, url: `${base}/${n}` }));
+        addOptions(sel, options, /*useCleanNames=*/true);
+        if (typeof updateStatus === 'function') updateStatus(`${options.length} fichier(s) via index local`, 'success');
+        else if (typeof logLine === 'function') logLine(`✓ ${options.length} fichier(s) via local.`);
         return [options, "local"];
     }
 
-    // 2) GitHub API fallback (useful on GitHub Pages)
+    // GitHub API fallback (GitHub Pages)
     const ghFiles = await tryFetchGitHubAPI();
     if (ghFiles && ghFiles.length) {
-        addOptions(sel, ghFiles); // ghFiles contains {name, url:download_url}
-        if (typeof logLine === 'function') logLine(`✓ ${ghFiles.length} file(s) via GitHub API.`);
+        addOptions(sel, ghFiles, /*useCleanNames=*/true);
+        if (typeof updateStatus === 'function') updateStatus(`${ghFiles.length} fichier(s) via GitHub API`, 'success');
+        else if (typeof logLine === 'function') logLine(`✓ ${ghFiles.length} fichier(s) via GitHub API.`);
         return [ghFiles, "github"];
     }
 
-    if (typeof logLine === 'function') {
-        logLine(manual ? 'ℹ️ No files detected.' :
-            'ℹ️ Unable to list conf_files/ (auto-index or API). Use the "personal file" button or add conf_files/index.json.');
+    if (typeof updateStatus === 'function') {
+        updateStatus(`ℹ️ Impossible de lister ${base}/. Utilisez un fichier personnel${mode==='user' ? ' ou ajoutez un manifest.json' : ''}.`, 'info');
+    } else if (typeof logLine === 'function') {
+        logLine(manual ? 'ℹ️ Aucun fichier détecté.' :
+            `ℹ️ Impossible de lister ${base}/. Utilisez le bouton "fichier personnel"${mode==='user' ? ' ou ajoutez un manifest.json' : ''}.`);
     }
 }
-
 
 /**
  * Adds options to the select element
  */
 function addOptions(selectEl, items, useCleanNames = true) {
     items
-        .filter(it => ALLOWED_EXT.test(it.name))
-        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+        // FIX: accepter les items manifest (label en name) en vérifiant aussi l'URL
+        .filter(it => ALLOWED_EXT.test(it.name || '') || ALLOWED_EXT.test(it.url || ''))
+        .sort((a, b) => (a.name || '').localeCompare((b.name || ''), undefined, { sensitivity: 'base' }))
         .forEach(it => {
             const opt = document.createElement('option');
             opt.value = it.url;
 
             if (useCleanNames) {
-                // Clean the name: remove extension and replace _ with spaces
-                const cleanName = it.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' ');
-                opt.textContent = cleanName;
+                const nm = (it.name || '');
+                const cleanName = nm.replace(/\.[^/.]+$/, '').replace(/_/g, ' ');
+                opt.textContent = cleanName || nm;
             } else {
-                opt.textContent = it.name;
+                // Mode débutant : conserver le label du manifest (emoji inclus)
+                opt.textContent = it.name || it.url;
             }
 
             selectEl.appendChild(opt);
@@ -178,38 +194,61 @@ function addOptions(selectEl, items, useCleanNames = true) {
  * Attempts to fetch the JSON manifest
  */
 async function tryFetchManifestJSON() {
+    const base = getConfigBase();
+    // Only meaningful for 'user' mode where a manifest exists
+    if (window.CONFIG_SOURCE !== 'user') return null;
     try {
-        const resp = await fetch('/conf_files/manifest.json?t=' + Date.now(), { cache: 'no-store' });
+        const resp = await fetch(`${base}/manifest.json?t=` + Date.now(), { cache: 'no-store' });
         if (!resp.ok) return null;
-        const arr = await resp.json();
-        return (Array.isArray(arr) ? arr.filter(n => typeof n === 'string') : null);
-    } catch { return null; }
+        const data = await resp.json();
+
+        // Support: { items: [{file, label}, ...] }  OR legacy: ["file.cfg", ...]
+        if (Array.isArray(data)) {
+            return data
+                .filter(n => typeof n === 'string')
+                .map(n => ({ name: n, url: `${base}/${n}` }));
+        }
+        if (data && Array.isArray(data.items)) {
+            return data.items
+                .filter(it => it && typeof it.file === 'string')
+                .map(it => ({
+                    name: (typeof it.label === 'string' && it.label.trim()) ? it.label : it.file,
+                    url: `${base}/${it.file}`
+                }));
+        }
+        return null;
+    } catch {
+        return null;
+    }
 }
 
 /**
  * Attempts to fetch the local index
  */
 async function tryFetchLocalIndex() {
+    const base = getConfigBase();
     try {
-        const resp = await fetch('conf_files/?t=' + Date.now(), { cache: 'no-store' });
+        const resp = await fetch(`${base}/?t=` + Date.now(), { cache: 'no-store' });
         if (!resp.ok) return null;
         const html = await resp.text();
         const doc = new DOMParser().parseFromString(html, 'text/html');
-        let files = Array.from(doc.querySelectorAll('a[href]'))
+        return Array.from(doc.querySelectorAll('a[href]'))
             .map(a => a.getAttribute('href') || '')
             .filter(href => href && !href.startsWith('?') && !href.startsWith('/'))
             .filter(href => !href.endsWith('/'))
             .filter(href => ALLOWED_EXT.test(href));
-        return files;
     } catch { return null; }
 }
+
 /**
  * Attempts to fetch via GitHub API
  */
 async function tryFetchGitHubAPI() {
+    const mode = (window.CONFIG_SOURCE === 'advanced') ? 'advanced' : 'user';
+    const dirPath = `conf_files/${mode}`;
     for (const branch of GH_BRANCH_CANDIDATES) {
         try {
-            const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/conf_files?ref=${encodeURIComponent(branch)}`;
+            const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${dirPath}?ref=${encodeURIComponent(branch)}`;
             const apiResp = await fetch(apiUrl, { cache: 'no-store' });
             if (!apiResp.ok) continue;
             const items = await apiResp.json();
@@ -218,7 +257,7 @@ async function tryFetchGitHubAPI() {
                 .filter(it => ALLOWED_EXT.test(it.name))
                 .map(it => ({ name: it.name, url: it.download_url }));
             if (files.length) return files;
-        } catch { /* try next branch */ }
+        } catch { /* next branch */ }
     }
     return null;
 }

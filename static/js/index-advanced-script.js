@@ -2,6 +2,9 @@
     Centipede-RTK Web Serial - JavaScript for index_advanced.html (advanced mode)
     ======================================== */
 
+// Set config source for this page
+window.CONFIG_SOURCE = 'advanced';
+
 // Variables specific to advanced mode
 const logEl = $('#log');
 
