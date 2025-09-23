@@ -1,10 +1,9 @@
 {
   "version": 1,
   "items": [
-    { "file": "NavX_bluetooth.cfg",      "label": "🔵 Bluetooth • NavX (BT836B)" },
-    { "file": "NavX_GNSS_Openfield.cfg",    "label": "🏜️ GNSS • NavX Openfield (rover)" },
-    { "file": "NavX_GNSS_Mixed.cfg",    "label": "🏞️ GNSS • NavX Mixed (rover)" },
-    { "file": "NavX_GNSS_Town.cfg",     "label": "🏙️ GNSS • NavX Town (rover urbain)" }
+    { "file": "NavX_bluetooth.cfg",         "label": "🔵 Bluetooth • NavX (BT836B)" },
+    { "file": "NavX_GNSS_Openfield.cfg",    "label": "___📍_🌳 ROVER • NavX Openfield" },
+    { "file": "NavX_GNSS_Mixed.cfg",        "label": "🌳_📍  🏡 ROVER • NavX Mixed" },
+    { "file": "NavX_GNSS_Town.cfg",         "label": "🏢_📍 🏬 ROVER • NavX Town" }
   ]
 }
-
