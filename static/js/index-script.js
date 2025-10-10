@@ -7,16 +7,16 @@ window.CONFIG_SOURCE = 'user';
 
 // bascule Débutant -> Avancé
 document.addEventListener('DOMContentLoaded', () => {
-  const sw = document.getElementById('modeSwitch');
-  if (!sw) return;
-  // Sur la page Débutant, le toggle doit être en position "Débutant" (OFF)
-  sw.checked = false;
-  sw.addEventListener('change', () => {
-    if (sw.checked) {
-      // Aller vers l’UI avancée
-      window.location.href = 'index_advanced.html';
-    }
-  });
+    const sw = document.getElementById('modeSwitch');
+    if (!sw) return;
+    // Sur la page Débutant, le toggle doit être en position "Débutant" (OFF)
+    sw.checked = false;
+    sw.addEventListener('change', () => {
+        if (sw.checked) {
+            // Aller vers l’UI avancée
+            window.location.href = 'index_advanced.html';
+        }
+    });
 });
 
 // Variables specific to beginner mode
@@ -98,6 +98,121 @@ function clearTerminal() {
     $('#uartTerminal').innerHTML = '';
 }
 
+/* ---------------------- Welcome Message ---------------------- */
+function showWelcomeMessage() {
+    // Vérifier si le message n'existe pas déjà
+    if (document.getElementById('welcomeContainer')) {
+        return;
+    }
+
+    // Créer le container de bienvenue
+    const welcomeContainer = document.createElement('div');
+    welcomeContainer.id = 'welcomeContainer';
+    welcomeContainer.style.cssText = `
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        animation: slideIn 0.5s ease-out;
+        position: relative;
+    `;
+
+    // Ajouter le bouton de fermeture
+    const closeButton = document.createElement('button');
+    closeButton.innerHTML = '×';
+    closeButton.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: background-color 0.3s;
+    `;
+
+    closeButton.onmouseover = () => {
+        closeButton.style.backgroundColor = 'rgba(255,255,255,0.2)';
+    };
+
+    closeButton.onmouseout = () => {
+        closeButton.style.backgroundColor = 'transparent';
+    };
+
+    closeButton.onclick = () => {
+        welcomeContainer.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => {
+            welcomeContainer.remove();
+        }, 300);
+    };
+
+    // Contenu du message
+    const content = document.createElement('div');
+    content.innerHTML = `
+        <h2 style="margin-top: 0; margin-bottom: 15px; color: #fff;">
+            Bienvenue dans Centipede Web Serial
+        </h2>
+        <p style="margin-bottom: 12px; line-height: 1.6;">
+            <strong>Centipede Web Serial</strong> est un outil de configuration pour les récepteurs GNSS/RTK. 
+            Il vous permet de configurer facilement vos équipements via une interface web moderne dont NavX.
+        </p>
+        <p style="margin-bottom: 12px; line-height: 1.6;">
+            <strong>⚠️ Compatibilité :</strong> Cette application fonctionne uniquement sur <strong>Chrome/Chromium</strong> 
+            en raison des limitations de l'API Web Serial.
+        </p>
+        <p style="margin-bottom: 12px; line-height: 1.6;">
+            <strong>💡 Astuce :</strong> Pour obtenir des informations détaillées sur les différentes configurations disponibles, 
+            sélectionnez-les dans le menu déroulant "Choisir un fichier". Une description apparaîtra automatiquement.
+        </p>
+    `;
+
+    welcomeContainer.appendChild(closeButton);
+    welcomeContainer.appendChild(content);
+
+    // Ajouter les animations CSS si elles n'existent pas
+    if (!document.getElementById('welcomeStyles')) {
+        const style = document.createElement('style');
+        style.id = 'welcomeStyles';
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateY(-20px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideOut {
+                from {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateY(-20px);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Insérer avant le main-container
+    const mainContainer = document.querySelector('.main-container') || document.querySelector('main') || document.body;
+    mainContainer.parentNode.insertBefore(welcomeContainer, mainContainer);
+}
+
 /* ---------------------- Configuration Management ---------------------- */
 function displayConfigDescription(description) {
     const container = $('#configDescriptionContainer');
@@ -137,6 +252,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log(e);
         updateStatus('Error loading configurations', 'error');
     }
+
+    // Afficher le message de bienvenue après 2 secondes
+    setTimeout(() => {
+        showWelcomeMessage();
+    }, 500);
 });
 
 // Toggle settings modal
