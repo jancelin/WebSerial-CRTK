@@ -160,10 +160,10 @@ function showWelcomeMessage() {
     const content = document.createElement('div');
     content.innerHTML = `
         <h2 style="margin-top: 0; margin-bottom: 15px; color: #fff;">
-            Bienvenue dans Centipede Web Serial
+            Bienvenue dans Centipede-RTK Web Serial
         </h2>
         <p style="margin-bottom: 12px; line-height: 1.6;">
-            <strong>Centipede Web Serial</strong> est un outil de configuration pour les récepteurs GNSS/RTK. 
+            <strong>Centipede-RTK Web Serial</strong> est un outil de configuration pour les récepteurs GNSS/RTK. 
             Il vous permet de configurer facilement vos équipements via une interface web moderne dont NavX.
         </p>
         <p style="margin-bottom: 12px; line-height: 1.6;">
