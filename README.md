@@ -75,13 +75,15 @@ Deux interfaces au choix :
 
 ```bash
 # à la racine du projet
-python3 -m http.server 8001
+python3 -m http.server -b 127.0.0.1
 # ouvrir http://localhost:8001
 ```
 
 * Page **Débutant** : `index.html`
 * Page **Avancé** : `index_advanced.html`
 * Le **switch** en haut-droite bascule entre les deux interfaces.
+
+* Optionnel : pour **désactiver** le message de bienvenue sur la page Débutant, ajoutez le paramètre d'URL `?natuition=true` (ex. `http://localhost:8001/index.html?natuition=true`).
 
 ---
 
@@ -100,7 +102,7 @@ python3 -m http.server 8001
 3. **Paramètres avancés (⚙️)**
 
    * **Fin de ligne = CRLF** (par défaut) — requis par de nombreux firmwares GNSS.
-   * **Délai entre commandes** (s) — laisser `5` si incertitude.
+  * **Délai entre commandes** (s) — laisser `5` si incertitude. Lorsque l'option d'envoi attend une réponse, la page attendra la première réponse reçue (via la console) avant d'envoyer la commande suivante, ou jusqu'à l'expiration du délai indiqué. Un intervalle minimum de 500 ms est toujours appliqué entre deux commandes.
 
 4. **Téléverser**
 
@@ -191,6 +193,7 @@ python3 -m http.server 8001
 * **Vitesse série (baud)** : 115200 par défaut. Si les réponses semblent corrompues, essayez 57600 / 230400 / 460800 (selon firmware).
 
 * **Temps entre commandes** : 5 s par défaut — utile après les commandes qui **redémarrent** ou réinitialisent le module (`FRESET`, `GNSSRESET`, etc.).
+  * Après `FRESET`, l'interface attendra la le reboot avant de poursuivre, et effectuera une pause minimale de 500 ms entre les commandes.
 
 * **Droits & pilotes** : sous Linux, appartenance au groupe `dialout` / `uucp` ; sous Windows, pilote USB-UART adapté (FTDI/CP210x/CH34x).
 

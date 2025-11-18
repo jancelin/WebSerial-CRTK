@@ -7,20 +7,21 @@ window.CONFIG_SOURCE = 'advanced';
 
 // Bascule Avancé -> Débutant
 document.addEventListener('DOMContentLoaded', () => {
-  const sw = document.getElementById('modeSwitch');
-  if (!sw) return;
-  // Sur la page Avancé, le toggle doit être en position "Avancé" (ON)
-  sw.checked = true;
-  sw.addEventListener('change', () => {
-    if (!sw.checked) {
-      // Revenir vers l’UI débutant
-      window.location.href = 'index.html';
-    }
-  });
+    const sw = document.getElementById('modeSwitch');
+    if (!sw) return;
+    // Sur la page Avancé, le toggle doit être en position "Avancé" (ON)
+    sw.checked = true;
+    sw.addEventListener('change', () => {
+        if (!sw.checked) {
+            // Revenir vers l’UI débutant
+            window.location.href = 'index.html';
+        }
+    });
 });
 
 // Variables specific to advanced mode
 const logEl = $('#log');
+let advRecvBuffer = '';
 
 /* ---------------------- UI Functions ---------------------- */
 function logLine(s) {
@@ -88,7 +89,11 @@ $('#connect').onclick = async () => {
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) break;
-                    if (value) logLine(value);
+                    if (!value) continue;
+                    advRecvBuffer += value;
+                    const parts = advRecvBuffer.split(/\r\n|\n/);
+                    advRecvBuffer = parts.pop();
+                    parts.forEach(p => { if (p.length) logLine(p); });
                 }
             } catch (e) {
                 logLine('✗ Read error: ' + e.message);

@@ -23,6 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
 let currentConfig = '';
 let isConnected = false;
 let terminalVisible = false;
+// Buffer used to assemble complete incoming lines for the beginner terminal
+let recvBuffer = '';
+// Minimum delay after each command (ms)
+const MIN_INTER_COMMAND_DELAY_MS = 500;
+// Pending resolvers for the 'wait for next received message' feature
+let pendingReceivedResolvers = [];
 
 /* ---------------------- UI Functions ---------------------- */
 function updateStatus(message, type = 'info') {
@@ -60,6 +66,7 @@ function toggleTerminal() {
 }
 
 function addToTerminal(message, type = 'info') {
+    console.log(`[Terminal ${type}] ${message}`);
     const terminal = $('#uartTerminal');
     const timestamp = new Date().toLocaleTimeString('fr-FR', {
         hour12: false,
@@ -92,6 +99,18 @@ function addToTerminal(message, type = 'info') {
 
     // Auto-scroll to bottom
     terminal.scrollTop = terminal.scrollHeight;
+
+    // If a 'received' message arrives, resolve the first matching pending waiter (if any)
+    if (type === 'received' && pendingReceivedResolvers.length) {
+        const idx = pendingReceivedResolvers.findIndex(w => {
+            try { return !w.predicate || w.predicate(String(message)); } catch { return false; }
+        });
+        if (idx >= 0) {
+            const waiter = pendingReceivedResolvers.splice(idx, 1)[0];
+            try { clearTimeout(waiter.timer); } catch { }
+            try { waiter.resolve(message); } catch { }
+        }
+    }
 }
 
 function clearTerminal() {
@@ -213,6 +232,78 @@ function showWelcomeMessage() {
     mainContainer.parentNode.insertBefore(welcomeContainer, mainContainer);
 }
 
+/**
+ * Return true when welcome message should be disabled via URL param
+ * Example: ?natuition=true or ?natuition=1
+ */
+function isWelcomeDisabledByUrl() {
+    try {
+        const p = new URLSearchParams(window.location.search).get('natuition');
+        if (!p) return false;
+        const v = String(p).toLowerCase();
+        return (v === 'true' || v === '1' || v === 'yes');
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
+ * Wait for the next received message (promise resolved by addToTerminal when a 'received' arrives)
+ * If timeoutMs is provided, it rejects after timeout
+ */
+function waitForNextReceived(timeoutMs) {
+    return new Promise((resolve, reject) => {
+        // Guard: if there is no reader, reject immediately
+        if (!reader) {
+            return reject(new Error('No reader available'));
+        }
+
+        const id = Symbol('waiter');
+        const timer = (typeof timeoutMs === 'number' && timeoutMs > 0) ? setTimeout(() => {
+            // remove resolver
+            pendingReceivedResolvers = pendingReceivedResolvers.filter(w => w.id !== id);
+            reject(new Error('timeout'));
+        }, timeoutMs) : null;
+
+        pendingReceivedResolvers.push({ id, resolve, reject, timer, predicate: () => true });
+    });
+}
+
+/**
+ * Wait for the next received message that matches the provided RegExp (or string), with optional timeout
+ */
+function waitForReceivedMatching(regexOrStr, timeoutMs) {
+    const re = (regexOrStr instanceof RegExp) ? regexOrStr : new RegExp(String(regexOrStr), 'i');
+    return new Promise((resolve, reject) => {
+        if (!reader) return reject(new Error('No reader available'));
+        const id = Symbol('waiter');
+        const timer = (typeof timeoutMs === 'number' && timeoutMs > 0) ? setTimeout(() => {
+            pendingReceivedResolvers = pendingReceivedResolvers.filter(w => w.id !== id);
+            reject(new Error('timeout'));
+        }, timeoutMs) : null;
+        pendingReceivedResolvers.push({ id, resolve, reject, timer, predicate: (m) => re.test(String(m)) });
+    });
+}
+
+/**
+ * Wait for a sequence of messages (each matched by a regex or string) in order.
+ * Returns true if the full sequence matched within overallTimeoutMs, false otherwise.
+ */
+async function waitForSequence(patterns, overallTimeoutMs, perMessageTimeoutMs) {
+    const start = Date.now();
+    for (const pat of patterns) {
+        const elapsed = Date.now() - start;
+        const remaining = overallTimeoutMs ? Math.max(0, overallTimeoutMs - elapsed) : perMessageTimeoutMs;
+        if (remaining <= 0) return false;
+        try {
+            await waitForReceivedMatching(pat, Math.min(perMessageTimeoutMs, remaining));
+        } catch (e) {
+            return false;
+        }
+    }
+    return true;
+}
+
 /* ---------------------- Configuration Management ---------------------- */
 function displayConfigDescription(description) {
     const container = $('#configDescriptionContainer');
@@ -253,10 +344,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateStatus('Error loading configurations', 'error');
     }
 
-    // Afficher le message de bienvenue après 2 secondes
-    setTimeout(() => {
-        showWelcomeMessage();
-    }, 500);
+    // Afficher le message de bienvenue après 500 ms (sauf si désactivé via ?natuition=true)
+    if (!isWelcomeDisabledByUrl()) {
+        setTimeout(() => {
+            showWelcomeMessage();
+        }, 500);
+    }
 });
 
 // Toggle settings modal
@@ -361,9 +454,14 @@ $('#connect').onclick = async () => {
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) break;
-                    // Display received data in terminal if visible
+                    // Buffer incoming data and display complete lines only
                     if (value && value.length > 0) {
-                        addToTerminal(value, 'received');
+                        recvBuffer += value;
+                        const parts = recvBuffer.split(/\r\n|\n/);
+                        recvBuffer = parts.pop(); // remainder
+                        for (const part of parts) {
+                            if (part.length) addToTerminal(part, 'received');
+                        }
                     }
                 }
             } catch (e) {
@@ -439,7 +537,19 @@ $('#upload').onclick = async () => {
 
         for (let i = 0; i < lines.length; i++) {
             const cmd = lines[i];
+            let waiterPromise = null;
+            // Prepare the correct waiter before writing to avoid race conditions
+            if (cmd.trim().toUpperCase() === 'FRESET') {
+                // For FRESET, we'll handle a specific sequence after writing the command (not via waiterPromise)
+                waiterPromise = null;
+            } else {
+                // For normal commands, wait for the next received chunk (use delaySec as timeout if > 0)
+                waiterPromise = (delaySec > 0) ? waitForNextReceived(delaySec * 1000).catch(() => null) : null;
+            }
             await writer.write(cmd + eol);
+            if (cmd.trim().toUpperCase() === 'FRESET') {
+                addToTerminal('⏳ Waiting for device response after FRESET...', 'info');
+            }
 
             // Display sent command in terminal
             addToTerminal(cmd + eol.replace(/\n/g, '\\n').replace(/\r/g, '\\r'), 'sent');
@@ -447,8 +557,37 @@ $('#upload').onclick = async () => {
             const progress = ((i + 1) / lines.length) * 100;
             updateProgress(progress, `Command ${i + 1}/${lines.length}: ${cmd.substring(0, 30)}${cmd.length > 30 ? '...' : ''}`);
 
-            if (i < lines.length - 1) {
-                await sleep(delaySec * 1000);
+            // For FRESET: wait for the 3-step reboot sequence: 1) FRESET response OK, 2) 'system is rebooting', 3) '..........'
+            // For other commands: wait for the next received chunk (registered before write), and always wait at least MIN_INTER_COMMAND_DELAY_MS
+            const sleepPromise = sleep(MIN_INTER_COMMAND_DELAY_MS);
+            if (cmd.trim().toUpperCase() === 'FRESET') {
+                const patterns = [
+                    /FRESET.*response:\s*OK/i,
+                    /system\s+is\s+rebooting/i,
+                    /^[.]+$/
+                ];
+                const overallTimeoutMs = Math.max(30000, delaySec * 1000 * 10);
+                try {
+                    const perMessageTimeoutMs = (delaySec > 0) ? (delaySec * 1000) : 5000;
+                    const matched = await waitForSequence(patterns, overallTimeoutMs, perMessageTimeoutMs);
+                    if (matched) addToTerminal('✅ Board finished reboot (sequence received).', 'info');
+                    else addToTerminal('⚠️ Board reboot sequence not complete — continuing', 'info');
+                } catch (e) {
+                    addToTerminal('⚠️ Error waiting for reboot sequence: ' + (e?.message || e), 'info');
+                }
+                // ensure minimal inter-command delay after reboot messages
+                await sleepPromise;
+                continue;
+            }
+            try {
+                if (waiterPromise) {
+                    await Promise.all([sleepPromise, waiterPromise]);
+                } else {
+                    await sleepPromise;
+                }
+            } catch (err) {
+                // On timeout (or no reader), continue and log a warning
+                addToTerminal(`⚠️ No response after ${delaySec}s — continuing`, 'info');
             }
         }
 
