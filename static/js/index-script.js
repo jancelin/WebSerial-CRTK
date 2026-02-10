@@ -137,6 +137,64 @@ function clearTerminal() {
     $('#uartTerminal').innerHTML = '';
 }
 
+function setConfigSummaryVisible(show) {
+    const container = $('#configSummaryTableContainer');
+    if (!container) return;
+    if (show) container.classList.remove('hidden');
+    else container.classList.add('hidden');
+}
+
+async function renderConfigSummaryTable() {
+    const container = $('#configSummaryTableContainer');
+    if (!container) return;
+
+    if ($('#configSelect')?.value) {
+        setConfigSummaryVisible(false);
+        return;
+    }
+
+    setConfigSummaryVisible(true);
+    container.innerHTML = '<div class="muted">Chargement des descriptions…</div>';
+
+    const items = await tryFetchManifestJSON();
+    if (!items || !items.length) {
+        container.innerHTML = '<div class="muted">Aucune description disponible.</div>';
+        return;
+    }
+
+    const rows = await Promise.all(items.map(async (it) => {
+        try {
+            const result = await loadConfigFromUrl(it.url);
+            const desc = extractConfigDescription(result.content);
+            return { label: it.name || it.url, desc };
+        } catch {
+            return { label: it.name || it.url, desc: null };
+        }
+    }));
+
+    const bodyHtml = rows.map(r => {
+        const title = r.desc?.title ? `<div class="config-summary-desc-title">${escapeHtml(r.desc.title)}</div>` : '';
+        const details = (r.desc?.details?.length)
+            ? `<ul class="config-summary-desc-list">${r.desc.details.map(d => `<li>${escapeHtml(d)}</li>`).join('')}</ul>`
+            : '<span class="muted">—</span>';
+        return `<tr><td>${escapeHtml(r.label)}</td><td>${title}${details}</td></tr>`;
+    }).join('');
+
+    container.innerHTML = `
+        <table class="config-summary-table">
+            <thead>
+                <tr>
+                    <th>Configuration</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${bodyHtml}
+            </tbody>
+        </table>
+    `;
+}
+
 /* ---------------------- Welcome Message ---------------------- */
 function showWelcomeMessage() {
     // Vérifier si le message n'existe pas déjà
@@ -359,6 +417,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             updateStatus('Unable to list conf_files/ (auto-index or API). Use the "personal file" button.', 'info');
         }
+        await renderConfigSummaryTable();
     } catch (e) {
         console.log(e);
         updateStatus('Error loading configurations', 'error');
@@ -419,6 +478,7 @@ $('#configSelect').onchange = async (ev) => {
         currentConfig = '';
         $('#upload').disabled = true;
         displayConfigDescription(null);
+        await renderConfigSummaryTable();
         return;
     }
     try {
@@ -431,11 +491,13 @@ $('#configSelect').onchange = async (ev) => {
         // Extract and display description
         const description = extractConfigDescription(result.content);
         displayConfigDescription(description);
+        setConfigSummaryVisible(false);
     } catch (e) {
         updateStatus(e.message, 'error');
         currentConfig = '';
         $('#upload').disabled = true;
         displayConfigDescription(null);
+        await renderConfigSummaryTable();
     }
 };
 
@@ -446,6 +508,7 @@ $('#configFile').onchange = async (ev) => {
         currentConfig = '';
         $('#upload').disabled = true;
         displayConfigDescription(null);
+        await renderConfigSummaryTable();
         return;
     }
     try {
@@ -459,11 +522,13 @@ $('#configFile').onchange = async (ev) => {
         // Extract and display description
         const description = extractConfigDescription(result.content);
         displayConfigDescription(description);
+        setConfigSummaryVisible(false);
     } catch (e) {
         updateStatus(e.message, 'error');
         currentConfig = '';
         $('#upload').disabled = true;
         displayConfigDescription(null);
+        await renderConfigSummaryTable();
     }
 };
 

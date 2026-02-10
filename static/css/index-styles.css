@@ -170,6 +170,48 @@ h1 {
   background: #f0f0f0;
 }
 
+.config-summary {
+  margin-top: 12px;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  background: #fafafa;
+  padding: 12px;
+}
+
+.config-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.config-summary-table th,
+.config-summary-table td {
+  text-align: left;
+  padding: 8px 10px;
+  vertical-align: top;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.config-summary-table th {
+  background: #f3f5f8;
+  font-weight: 600;
+  color: var(--dark);
+}
+
+.config-summary-table tr:last-child td {
+  border-bottom: none;
+}
+
+.config-summary-desc-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.config-summary-desc-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
 .settings-modal {
   position: fixed;
   top: 0;
