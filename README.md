@@ -83,7 +83,7 @@ python3 -m http.server -b 127.0.0.1
 * Page **Avancé** : `index_advanced.html`
 * Le **switch** en haut-droite bascule entre les deux interfaces.
 
-* Optionnel : pour **désactiver** le message de bienvenue sur la page Débutant, ajoutez le paramètre d'URL `?natuition=true` (ex. `http://localhost:8001/index.html?natuition=true`).
+* Optionnel : pour **désactiver** le message de bienvenue sur la page Débutant, ajoutez le paramètre d'URL `?disable_help=true` (ex. `http://localhost:8001/index.html?disable_help=true`).
 
 ---
 

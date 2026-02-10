@@ -254,11 +254,11 @@ function showWelcomeMessage() {
 
 /**
  * Return true when welcome message should be disabled via URL param
- * Example: ?natuition=true or ?natuition=1
+ * Example: ?disable_help=true or ?disable_help=1
  */
 function isWelcomeDisabledByUrl() {
     try {
-        const p = new URLSearchParams(window.location.search).get('natuition');
+        const p = new URLSearchParams(window.location.search).get('disable_help');
         if (!p) return false;
         const v = String(p).toLowerCase();
         return (v === 'true' || v === '1' || v === 'yes');
@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateStatus('Error loading configurations', 'error');
     }
 
-    // Afficher le message de bienvenue après 500 ms (sauf si désactivé via ?natuition=true)
+    // Afficher le message de bienvenue après 500 ms (sauf si désactivé via ?disable_help=true)
     if (!isWelcomeDisabledByUrl()) {
         setTimeout(() => {
             showWelcomeMessage();
