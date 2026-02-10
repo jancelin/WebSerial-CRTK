@@ -35,7 +35,15 @@
         <div class="control-row">
           <button id="connect" class="btn btn-primary" style="flex: 1;">🔌 Connecter</button>
           <button id="disconnect" class="btn btn-primary hidden" disabled style="flex: 1;">⏏️ Déconnecter</button>
-          <div style="flex: 1; height : 75px;">
+          <div style="flex: 0.5; height : 75px;">
+            <label>Transport</label>
+            <select id="transport">
+              <option value="serial" selected>USB</option>
+              <option value="ble">BLE</option>
+            </select>
+            <div class="muted" id="deviceName" style="margin-top:6px; font-size:12px;">—</div>
+          </div>
+          <div style="flex: 0.75; height : 75px;">
             <label>Vitesse de transmission</label>
             <select id="baud">
               <option>4800</option>
@@ -125,37 +133,36 @@
           </select>
 
 
-        <div class="control-group">
-          <label>Délai entre commande(s)</label>
-          <input id="delay" type="number" min="0" step="0.1" value="5">
-        </div>
+          <div class="control-group">
+            <label>Délai entre commande(s)</label>
+            <input id="delay" type="number" min="0" step="0.1" value="5">
+          </div>
 
-        <div class="control-group">
-          <label>Charger un fichier personnel</label>
-          <input id="configFile" type="file" accept=".txt,.cfg,.conf,.ini,.log,.nmea,.csv,.*" />
-        </div>
+          <div class="control-group">
+            <label>Charger un fichier personnel</label>
+            <input id="configFile" type="file" accept=".txt,.cfg,.conf,.ini,.log,.nmea,.csv,.*" />
+          </div>
 
-        <div class="control-group">
-          <button id="save" class="btn btn-primary" style="width:100%;margin-top:8px">💾 SAVECONFIG</button>
+          <div class="control-group">
+            <button id="save" class="btn btn-primary" style="width:100%;margin-top:8px">💾 SAVECONFIG</button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <footer>
-    <span>🄯 2025 by Centipede-RTK</span>
-    <a href="https://github.com/jancelin/WebSerial-CRTK" target="_blank" rel="noopener">
-      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-        <path fill="currentColor"
-          d="M8 .2a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.3...4 .29.25.54.73.54 1.48v2.2c0 .21.15.45.55.38A8 8 0 0 0 8 .2Z" />
-      </svg>
-      github.com/jancelin/Webserial-CRTK
-    </a>
-  </footer>
+    <footer>
+      <span>🄯 2025 by Centipede-RTK</span>
+      <a href="https://github.com/jancelin/WebSerial-CRTK" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+          <path fill="currentColor"
+            d="M8 .2a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.3...4 .29.25.54.73.54 1.48v2.2c0 .21.15.45.55.38A8 8 0 0 0 8 .2Z" />
+        </svg>
+        github.com/jancelin/Webserial-CRTK
+      </a>
+    </footer>
 
-  <script src="static/js/script.js"></script>
-  <script src="static/js/index-script.js"></script>
+    <script src="static/js/script.js"></script>
+    <script src="static/js/index-script.js"></script>
 </body>
 
 </html>
-

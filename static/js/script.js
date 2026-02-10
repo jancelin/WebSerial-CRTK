@@ -7,6 +7,14 @@ let port, reader, writer;
 let textDecoder, textEncoder;
 let readableStreamClosed, writableStreamClosed;
 let sendingBatch = false;
+let currentTransport = 'serial';
+
+// BLE (Nordic UART Service)
+const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const NUS_RX_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+const NUS_TX_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+let bleDevice, bleServer, bleService, bleRxChar, bleTxChar;
+let bleReceiveStream, bleReceiveController;
 
 /* Common UI helpers */
 const $ = s => document.querySelector(s);
@@ -17,6 +25,15 @@ const $ = s => document.querySelector(s);
 function ensureWebSerial() {
     if (!('serial' in navigator)) {
         throw new Error('Web Serial not supported in this browser. Use Chrome/Chromium desktop.');
+    }
+}
+
+/**
+ * Checks for Web Bluetooth support
+ */
+function ensureWebBluetooth() {
+    if (!('bluetooth' in navigator)) {
+        throw new Error('Web Bluetooth not supported in this browser. Use Chrome/Chromium desktop.');
     }
 }
 
@@ -63,7 +80,76 @@ async function connectSerial() {
         writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
         writer = textEncoder.writable.getWriter();
 
+        currentTransport = 'serial';
         return { baudRate, success: true };
+    } catch (e) {
+        throw e;
+    }
+}
+
+/**
+ * BLE notification handler -> stream
+ */
+function handleBleNotification(event) {
+    try {
+        const value = event?.target?.value;
+        if (!value) return;
+        const chunk = new TextDecoder().decode(value.buffer);
+        if (bleReceiveController) bleReceiveController.enqueue(chunk);
+    } catch (e) {
+        console.warn('BLE notify error', e);
+    }
+}
+
+/**
+ * Common Web Bluetooth connection function (NUS)
+ */
+async function connectBle() {
+    try {
+        ensureWebBluetooth();
+
+        const device = await navigator.bluetooth.requestDevice({
+            filters: [{ services: [NUS_SERVICE_UUID] }],
+            optionalServices: [NUS_SERVICE_UUID]
+        });
+        bleDevice = device;
+
+        bleServer = await device.gatt.connect();
+        bleService = await bleServer.getPrimaryService(NUS_SERVICE_UUID);
+        bleRxChar = await bleService.getCharacteristic(NUS_RX_UUID);
+        bleTxChar = await bleService.getCharacteristic(NUS_TX_UUID);
+
+        bleReceiveStream = new ReadableStream({
+            start(controller) {
+                bleReceiveController = controller;
+            },
+            cancel() {
+                bleReceiveController = null;
+            }
+        });
+
+        reader = bleReceiveStream.getReader();
+        writer = {
+            write: async (data) => {
+                if (!bleRxChar) throw new Error('BLE RX characteristic not available');
+                const payload = new TextEncoder().encode(String(data));
+                const chunkSize = 20;
+                for (let i = 0; i < payload.length; i += chunkSize) {
+                    const chunk = payload.slice(i, i + chunkSize);
+                    if (bleRxChar.writeValueWithoutResponse) {
+                        await bleRxChar.writeValueWithoutResponse(chunk);
+                    } else {
+                        await bleRxChar.writeValue(chunk);
+                    }
+                }
+            }
+        };
+
+        await bleTxChar.startNotifications();
+        bleTxChar.addEventListener('characteristicvaluechanged', handleBleNotification);
+
+        currentTransport = 'ble';
+        return { success: true, transport: 'ble', deviceName: device?.name || 'BLE device' };
     } catch (e) {
         throw e;
     }
@@ -101,6 +187,60 @@ async function disconnectSerial() {
     } catch (e) {
         throw e;
     }
+}
+
+/**
+ * Common Web Bluetooth disconnection function
+ */
+async function disconnectBle() {
+    try {
+        try { bleTxChar?.removeEventListener('characteristicvaluechanged', handleBleNotification); } catch { }
+        try { await bleTxChar?.stopNotifications(); } catch { }
+        try { if (bleDevice?.gatt?.connected) bleDevice.gatt.disconnect(); } catch { }
+
+        try { await reader?.cancel(); } catch { }
+        reader?.releaseLock?.();
+        try { bleReceiveController?.close?.(); } catch { }
+
+        writer = undefined;
+        reader = undefined;
+        bleReceiveController = undefined;
+        bleReceiveStream = undefined;
+        bleRxChar = bleTxChar = bleService = bleServer = bleDevice = undefined;
+
+        return { success: true };
+    } catch (e) {
+        throw e;
+    }
+}
+
+/**
+ * Returns selected transport (serial|ble)
+ */
+function getSelectedTransport() {
+    const el = $('#transport');
+    const v = el?.value || 'serial';
+    return (v === 'ble') ? 'ble' : 'serial';
+}
+
+/**
+ * Common connect based on UI transport
+ */
+async function connectTransport() {
+    const transport = getSelectedTransport();
+    if (transport === 'ble') return await connectBle();
+    return await connectSerial();
+}
+
+/**
+ * Common disconnect based on current transport
+ */
+async function disconnectTransport() {
+    if (currentTransport === 'ble') {
+        currentTransport = 'serial';
+        return await disconnectBle();
+    }
+    return await disconnectSerial();
 }
 
 /* ---------------------- Configuration files listing ---------------------- */
@@ -158,10 +298,10 @@ async function populateConfigSelect(manual) {
     }
 
     if (typeof updateStatus === 'function') {
-        updateStatus(`ℹ️ Impossible de lister ${base}/. Utilisez un fichier personnel${mode==='user' ? ' ou ajoutez un manifest.json' : ''}.`, 'info');
+        updateStatus(`ℹ️ Impossible de lister ${base}/. Utilisez un fichier personnel${mode === 'user' ? ' ou ajoutez un manifest.json' : ''}.`, 'info');
     } else if (typeof logLine === 'function') {
         logLine(manual ? 'ℹ️ Aucun fichier détecté.' :
-            `ℹ️ Impossible de lister ${base}/. Utilisez le bouton "fichier personnel"${mode==='user' ? ' ou ajoutez un manifest.json' : ''}.`);
+            `ℹ️ Impossible de lister ${base}/. Utilisez le bouton "fichier personnel"${mode === 'user' ? ' ou ajoutez un manifest.json' : ''}.`);
     }
 }
 

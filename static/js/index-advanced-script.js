@@ -22,6 +22,23 @@ document.addEventListener('DOMContentLoaded', () => {
 // Variables specific to advanced mode
 const logEl = $('#log');
 let advRecvBuffer = '';
+let showNmea = false;
+const MIN_INTER_COMMAND_DELAY_MS = 500;
+let waitAck = true;
+
+function isNmeaLine(message) {
+    return typeof message === 'string' && /^\$[A-Z]{5},/.test(message);
+}
+
+function updateTransportUi() {
+    const transport = $('#transport')?.value || 'serial';
+    const baudEl = $('#baud');
+    if (baudEl) {
+        baudEl.disabled = (transport === 'ble');
+    }
+    const nameEl = $('#deviceName');
+    if (nameEl && transport === 'serial') nameEl.textContent = '—';
+}
 
 /* ---------------------- UI Functions ---------------------- */
 function logLine(s) {
@@ -45,6 +62,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     } catch (e) {
         logLine('✗ Error loading configurations');
+    }
+
+    const transportSel = $('#transport');
+    if (transportSel) {
+        transportSel.addEventListener('change', updateTransportUi);
+        updateTransportUi();
+    }
+
+    const showNmeaEl = $('#showNmea');
+    if (showNmeaEl) {
+        showNmea = !!showNmeaEl.checked;
+        showNmeaEl.addEventListener('change', () => {
+            showNmea = !!showNmeaEl.checked;
+            logLine(showNmea ? 'ℹ️ NMEA affiché' : 'ℹ️ NMEA masqué');
+        });
+    }
+
+    const waitAckEl = $('#waitAck');
+    if (waitAckEl) {
+        waitAck = !!waitAckEl.checked;
+        waitAckEl.addEventListener('change', () => {
+            waitAck = !!waitAckEl.checked;
+            logLine(waitAck ? 'ℹ️ Attente d’acquittement activée' : 'ℹ️ Attente d’acquittement désactivée');
+        });
     }
 });
 
@@ -81,7 +122,7 @@ $('#configFile').onchange = async (ev) => {
 /* ---------------------- Serial Communication ---------------------- */
 $('#connect').onclick = async () => {
     try {
-        const result = await connectSerial();
+        const result = await connectTransport();
 
         // Read loop specific to advanced mode
         (async function readLoop() {
@@ -93,7 +134,11 @@ $('#connect').onclick = async () => {
                     advRecvBuffer += value;
                     const parts = advRecvBuffer.split(/\r\n|\n/);
                     advRecvBuffer = parts.pop();
-                    parts.forEach(p => { if (p.length) logLine(p); });
+                    parts.forEach(p => {
+                        if (!p.length) return;
+                        if (!showNmea && isNmeaLine(p)) return;
+                        logLine(p);
+                    });
                 }
             } catch (e) {
                 logLine('✗ Read error: ' + e.message);
@@ -102,7 +147,15 @@ $('#connect').onclick = async () => {
 
         $('#connect').disabled = true;
         $('#disconnect').disabled = false;
-        logLine('✓ Connected @ ' + result.baudRate + ' baud');
+        if (result?.transport === 'ble') {
+            const nameEl = $('#deviceName');
+            if (nameEl) nameEl.textContent = result.deviceName || 'BLE device';
+            logLine('✓ Connected BLE (' + (result.deviceName || 'device') + ')');
+        } else {
+            const nameEl = $('#deviceName');
+            if (nameEl) nameEl.textContent = '—';
+            logLine('✓ Connected @ ' + result.baudRate + ' baud');
+        }
     } catch (e) {
         logLine('✗ Connection error: ' + (e?.message || e));
     }
@@ -110,10 +163,12 @@ $('#connect').onclick = async () => {
 
 $('#disconnect').onclick = async () => {
     try {
-        await disconnectSerial();
+        await disconnectTransport();
 
         $('#connect').disabled = false;
         $('#disconnect').disabled = true;
+        const nameEl = $('#deviceName');
+        if (nameEl) nameEl.textContent = '—';
         logLine('⏏️ Disconnected');
     } catch (e) {
         logLine('✗ Disconnection: ' + (e?.message || e));
@@ -141,9 +196,33 @@ $('#send').onclick = async () => {
         logLine(`▶️ Sending ${lines.length} command(s), delay ${delaySec}s…`);
         for (let i = 0; i < lines.length; i++) {
             const cmd = lines[i];
+            if (cmd.trim().toUpperCase() === 'FRESET' && currentTransport === 'ble') {
+                logLine(`⏭️ [${i + 1}/${lines.length}] FRESET ignoré en BLE`);
+                await sleep(MIN_INTER_COMMAND_DELAY_MS);
+                continue;
+            }
+            const nonNmeaPattern = /^(?!\$[A-Z]{5},).+/;
+            const waiterPromise = (waitAck && delaySec > 0)
+                ? waitForReceivedMatching(nonNmeaPattern, delaySec * 1000).catch(() => null)
+                : null;
+
             await writer.write(cmd + eol);
             logLine(`→ [${i + 1}/${lines.length}] ${cmd}`);
-            if (i < lines.length - 1) await sleep(delaySec * 1000);
+
+            const sleepPromise = sleep(MIN_INTER_COMMAND_DELAY_MS);
+            if (waitAck) {
+                try {
+                    if (waiterPromise) {
+                        await Promise.all([sleepPromise, waiterPromise]);
+                    } else {
+                        await sleepPromise;
+                    }
+                } catch (err) {
+                    logLine(`⚠️ No response after ${delaySec}s — continuing`);
+                }
+            } else {
+                await sleep(delaySec * 1000);
+            }
         }
         logLine('✅ Batch completed.');
     } catch (e) {

@@ -30,6 +30,20 @@ const MIN_INTER_COMMAND_DELAY_MS = 500;
 // Pending resolvers for the 'wait for next received message' feature
 let pendingReceivedResolvers = [];
 
+function isNmeaLine(message) {
+    return typeof message === 'string' && /^\$[A-Z]{5},/.test(message);
+}
+
+function updateTransportUi() {
+    const transport = $('#transport')?.value || 'serial';
+    const baudEl = $('#baud');
+    if (baudEl) {
+        baudEl.disabled = (transport === 'ble');
+    }
+    const nameEl = $('#deviceName');
+    if (nameEl && transport === 'serial') nameEl.textContent = '—';
+}
+
 /* ---------------------- UI Functions ---------------------- */
 function updateStatus(message, type = 'info') {
     const statusEl = $('#status');
@@ -66,7 +80,11 @@ function toggleTerminal() {
 }
 
 function addToTerminal(message, type = 'info') {
-    console.log(`[Terminal ${type}] ${message}`);
+    const isNmea = (type === 'received' && isNmeaLine(message));
+    const shouldRender = !(type === 'received' && sendingBatch && isNmea);
+    if (!isNmea && shouldRender) {
+        console.log(`[Terminal ${type}] ${message}`);
+    }
     const terminal = $('#uartTerminal');
     const timestamp = new Date().toLocaleTimeString('fr-FR', {
         hour12: false,
@@ -93,12 +111,14 @@ function addToTerminal(message, type = 'info') {
             break;
     }
 
-    const line = document.createElement('div');
-    line.innerHTML = `<span class="timestamp">[${timestamp}]</span> <span class="${cssClass}">${prefix}${escapeHtml(message)}</span>`;
-    terminal.appendChild(line);
+    if (shouldRender) {
+        const line = document.createElement('div');
+        line.innerHTML = `<span class="timestamp">[${timestamp}]</span> <span class="${cssClass}">${prefix}${escapeHtml(message)}</span>`;
+        terminal.appendChild(line);
 
-    // Auto-scroll to bottom
-    terminal.scrollTop = terminal.scrollHeight;
+        // Auto-scroll to bottom
+        terminal.scrollTop = terminal.scrollHeight;
+    }
 
     // If a 'received' message arrives, resolve the first matching pending waiter (if any)
     if (type === 'received' && pendingReceivedResolvers.length) {
@@ -350,6 +370,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             showWelcomeMessage();
         }, 500);
     }
+
+    const transportSel = $('#transport');
+    if (transportSel) {
+        transportSel.addEventListener('change', updateTransportUi);
+        updateTransportUi();
+    }
 });
 
 // Toggle settings modal
@@ -446,7 +472,7 @@ $('#connect').onclick = async () => {
     try {
         updateStatus('Connecting...', 'info');
 
-        const result = await connectSerial();
+        const result = await connectTransport();
 
         // Beginner mode specific read loop
         (async function readLoop() {
@@ -474,7 +500,15 @@ $('#connect').onclick = async () => {
         $('#disconnect').classList.remove('hidden');
         $('#disconnect').disabled = false;
         $('#upload').disabled = !currentConfig;
-        updateStatus(`Connected @ ${result.baudRate} baud`, 'success');
+        if (result?.transport === 'ble') {
+            const nameEl = $('#deviceName');
+            if (nameEl) nameEl.textContent = result.deviceName || 'BLE device';
+            updateStatus(`Connected BLE (${result.deviceName || 'device'})`, 'success');
+        } else {
+            const nameEl = $('#deviceName');
+            if (nameEl) nameEl.textContent = '—';
+            updateStatus(`Connected @ ${result.baudRate} baud`, 'success');
+        }
     } catch (e) {
         updateStatus('Connection error: ' + (e?.message || e), 'error');
     }
@@ -482,7 +516,7 @@ $('#connect').onclick = async () => {
 
 $('#disconnect').onclick = async () => {
     try {
-        await disconnectSerial();
+        await disconnectTransport();
 
         isConnected = false;
         $('#connect').classList.remove('hidden');
@@ -490,6 +524,8 @@ $('#disconnect').onclick = async () => {
         $('#disconnect').disabled = true;
         $('#upload').disabled = true;
         showProgress(false);
+        const nameEl = $('#deviceName');
+        if (nameEl) nameEl.textContent = '—';
         updateStatus('Disconnected', 'info');
     } catch (e) {
         updateStatus('Disconnection error: ' + (e?.message || e), 'error');
@@ -537,14 +573,24 @@ $('#upload').onclick = async () => {
 
         for (let i = 0; i < lines.length; i++) {
             const cmd = lines[i];
+            if (cmd.trim().toUpperCase() === 'FRESET' && currentTransport === 'ble') {
+                addToTerminal('⏭️ FRESET ignoré en BLE', 'info');
+                const progress = ((i + 1) / lines.length) * 100;
+                updateProgress(progress, `Command ${i + 1}/${lines.length}: ${cmd.substring(0, 30)}${cmd.length > 30 ? '...' : ''}`);
+                await sleep(MIN_INTER_COMMAND_DELAY_MS);
+                continue;
+            }
             let waiterPromise = null;
             // Prepare the correct waiter before writing to avoid race conditions
             if (cmd.trim().toUpperCase() === 'FRESET') {
                 // For FRESET, we'll handle a specific sequence after writing the command (not via waiterPromise)
                 waiterPromise = null;
             } else {
-                // For normal commands, wait for the next received chunk (use delaySec as timeout if > 0)
-                waiterPromise = (delaySec > 0) ? waitForNextReceived(delaySec * 1000).catch(() => null) : null;
+                // For normal commands, wait for the next non-NMEA received chunk (use delaySec as timeout if > 0)
+                const nonNmeaPattern = /^(?!\$[A-Z]{5},).+/;
+                waiterPromise = (delaySec > 0)
+                    ? waitForReceivedMatching(nonNmeaPattern, delaySec * 1000).catch(() => null)
+                    : null;
             }
             await writer.write(cmd + eol);
             if (cmd.trim().toUpperCase() === 'FRESET') {
@@ -577,6 +623,9 @@ $('#upload').onclick = async () => {
                 }
                 // ensure minimal inter-command delay after reboot messages
                 await sleepPromise;
+                // extra safety pause after FRESET
+                addToTerminal('⏸️ Pause 5s après FRESET...', 'info');
+                await sleep(5000);
                 continue;
             }
             try {

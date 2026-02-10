@@ -32,6 +32,14 @@
         <button id="connect">🔌 Connecter</button>
         <button id="disconnect" disabled>⏏️ Déconnecter</button>
 
+        <label>Transport
+            <select id="transport">
+                <option value="serial" selected>USB</option>
+                <option value="ble">BLE</option>
+            </select>
+            <div class="muted" id="deviceName" style="margin-top:6px; font-size:12px;">—</div>
+        </label>
+
         <label>Baud
             <select id="baud">
                 <option>4800</option>
@@ -82,6 +90,14 @@
         <button id="send">➡️ Envoyer (multi-lignes)</button>
         <button id="save">💾 SAVECONFIG</button>
         <button id="clear">🧹 Effacer le log</button>
+        <label class="muted" style="display:inline-flex; align-items:center; gap:6px;">
+            <input type="checkbox" id="waitAck" checked>
+            Attendre acquittement
+        </label>
+        <label class="muted" style="display:inline-flex; align-items:center; gap:6px;">
+            <input type="checkbox" id="showNmea">
+            Afficher NMEA
+        </label>
         <span class="muted">Astuce : gardez CRLF si requis par le firmware.</span>
     </div>
 
