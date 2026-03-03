@@ -42,6 +42,19 @@ function updateTransportUi() {
     }
     const nameEl = $('#deviceName');
     if (nameEl && transport === 'serial') nameEl.textContent = '—';
+
+    // Update transport icons
+    const usbIcon = document.querySelector('.transport-icon.usb-icon');
+    const bleIcon = document.querySelector('.transport-icon.ble-icon');
+    if (usbIcon && bleIcon) {
+        if (transport === 'serial') {
+            usbIcon.style.display = 'block';
+            bleIcon.style.display = 'none';
+        } else {
+            usbIcon.style.display = 'none';
+            bleIcon.style.display = 'block';
+        }
+    }
 }
 
 /* ---------------------- UI Functions ---------------------- */

@@ -15,6 +15,7 @@ Deux interfaces au choix :
 * [Prérequis](#prérequis)
 * [Arborescence du projet](#arborescence-du-projet)
 * [Démarrage rapide (local)](#démarrage-rapide-local)
+* [Déploiement avec Docker / Docker Compose](#déploiement-avec-docker--docker-compose)
 * [Interface Débutant : mode guidé](#interface-débutant--mode-guidé)
 * [Interface Avancé : mode manuel](#interface-avancé--mode-manuel)
 * [Format des fichiers .cfg](#format-des-fichiers-cfg)
@@ -84,6 +85,48 @@ python3 -m http.server -b 127.0.0.1
 * Le **switch** en haut-droite bascule entre les deux interfaces.
 
 * Optionnel : pour **désactiver** le message de bienvenue sur la page Débutant, ajoutez le paramètre d'URL `?disable_help=true` (ex. `http://localhost:8001/index.html?disable_help=true`).
+
+---
+
+## Déploiement avec Docker / Docker Compose
+
+### Production (sans watch)
+
+```bash
+docker-compose up
+```
+
+Accédez à `http://localhost:8080`
+
+**Services :**
+- `web` : serveur Nginx avec tous les fichiers statiques
+
+**Volumes :**
+- `./static/` → `/usr/share/nginx/html/static` (CSS, JS, images)
+- `./index.html` → `/usr/share/nginx/html/index.html`
+- `./index_advanced.html` → `/usr/share/nginx/html/index_advanced.html`
+- `./conf_files/` → `/usr/share/nginx/html/conf_files` (configurations)
+
+### Développement (avec watch)
+
+```bash
+docker-compose --profile watch up
+```
+
+**Services supplémentaires :**
+- `file-watcher` : surveille les changements dans `static/`, `index.html` et `index_advanced.html`
+- Affiche les logs en temps réel des fichiers modifiés
+
+**Workflow développement :**
+1. Lancez Docker avec `--profile watch`
+2. Modifiez vos fichiers CSS/JS/HTML
+3. Rafraîchissez la page `http://localhost:8080` pour voir les changements
+
+### Arrêter les services
+
+```bash
+docker-compose down
+```
 
 ---
 

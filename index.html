@@ -12,7 +12,7 @@
 
 <body>
   <!-- Mode Switch -->
-  <div class="mode-switch-container">
+  <div class="mode-switch-container mobile-top-left">
     <div class="mode-switch">
       <span>Débutant</span>
       <label class="switch">
@@ -32,53 +32,47 @@
     <div class="main-container">
       <!-- Boutons principaux + Baud -->
       <div class="control-group">
-        <div class="control-row">
-          <button id="connect" class="btn btn-primary" style="flex: 1;">🔌 Connecter</button>
-          <button id="disconnect" class="btn btn-primary hidden" disabled style="flex: 1;">⏏️ Déconnecter</button>
-          <div style="flex: 0.5; height : 75px;">
-            <label>Transport</label>
-            <select id="transport">
-              <option value="serial" selected>USB</option>
-              <option value="ble">BLE</option>
-            </select>
-            <div class="muted" id="deviceName" style="margin-top:6px; font-size:12px;">—</div>
-          </div>
-          <div style="flex: 0.75; height : 75px;">
-            <label>Vitesse de transmission</label>
-            <select id="baud">
-              <option>4800</option>
-              <option>9600</option>
-              <option>19200</option>
-              <option>28800</option>
-              <option>38400</option>
-              <option>57600</option>
-              <option>76800</option>
-              <option selected>115200</option>
-              <option>230400</option>
-              <option>460800</option>
-              <option>576000</option>
-              <option>921600</option>
-            </select>
+        <div class="control-row connect-row mobile-connect-row" style="align-items: stretch;">
+          <button id="connect" class="btn btn-primary" style="flex: 1; height: 75px; min-width: 120px;">🔌
+            Connecter</button>
+          <button id="disconnect" class="btn btn-primary hidden" disabled
+            style="flex: 1; height: 75px; min-width: 120px;">⏏️ Déconnecter</button>
+          <div
+            style="flex: 1; height: 75px; display: flex; flex-direction: column; justify-content: center; min-width: 165px;">
+            <div class="transport-selector" style="flex: 1; display: flex; align-items: center; min-width: 0;">
+              <img class="transport-icon usb-icon"
+                src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAACx0lEQVR4nO2X22vTUBzHo8LAv0HwL/ECgi/LSc/pkjzIRLwwmCs5c0Pdkpe+CLbKhiIOrFMfVNDVnbOCDyqu0r6sCpKxG7r2zctkMtjwgg/KkXZbbbJ26WnWZI584feUC5/P79wSQQgSpPkx3xWYm/IAcfMEAn7HDAR8jrlTBBRsWMoOWuu63/xCIOB3zJ2yBsxAwKeYgYDPMf9HATUabZE1I65o+mf79shbMjY+KViPFd/pmYCC9Zhb8I2lx7wT0Nx3vspILHgngLe6+6sVCNSbQADvRIGefiaOhU4ACkdFgvIiQT8AQSuAwjmRoHsSQVAdUfdsS4Hw5S4mPVIYoGjTEgmakUbDR7ePQLfO4NBJR3BQKUHhH5EgfVsI8MIDS8Hzvgqg+FkX8Kg4Er9FCg/6I9DTz8Bj5zkPKgqlZHZpImqXeCMwYZfnAuhKJxc8TMksNf+AFZZybHjqBpNo+N91gg57LhC6287V+dT8wxL8el3I9FbuTIPcAjLWv7kRkJJtG0C1dIRFxrsc4W+aA9ZnCcryj4BmTLua/3b48QibXcyyua9Z1p3G5Wkzlr9vgb81ea3ablTgF8D61YYFzum2+d3Gch+flSFnFjOs+5W2ofND5mCtwy3PLaD2GPtkzfjZqARIyhaIjhcdbPJLugybX5qoC35tCmW4BVZHof/UVi7iM89Ps7cLLy3ghaUcS0xedzoPBoRGI2OjU8HGL+5tNF59G7VLJBzgi9U6FjokuImK+/aX1oRmTMua8d0JXsbGstJ7MQuehFc2k0jUAQ8ofN3QQeaUWvCV9wCCOmuBHXvaXtenBCDowJbD1ytQjEjQbZ4TGVgXb29T4HkE1BG1RSRomPtzmsK+psHzCKxn7U/sQx1dn5JGw0eaCt+IQDHqiLq3laDjgKAkoPB96ZeSwmWRoFlA4R1AoRSNRnc3HT5IEKGcv9WwF3+CjnqdAAAAAElFTkSuQmCC"
+                alt="usb-connected">
+              <select id="transport" class="transport-select">
+                <option value="serial">USB-C</option>
+                <option value="ble" selected>Bluetooth</option>
+              </select>
+              <img class="transport-icon ble-icon"
+                src="data:image/png;base64,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"
+                alt="Bluetooth" style="display:none;">
+            </div>
+            <div class="muted" id="deviceName" style="margin-top:6px; font-size:12px; flex: 0 0 auto;">—</div>
           </div>
         </div>
       </div>
 
       <!-- Contrôles de configuration -->
       <div class="control-group">
-        <div class="control-row">
-          <div style="flex: 1; height : 75px;">
-            <label>Configurations</label>
-            <div class="file-group">
-              <select id="configSelect">
-                <option value="">— Choisir une configuration —</option>
-              </select>
-              <button id="refreshList" class="refresh-btn" title="Rafraîchir la liste">↻</button>
+        <div class="control-row config-row mobile-config-row" style="align-items: flex-end; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 180px; display: flex; align-items: flex-end; gap: 8px;">
+            <div style="flex: 2 1 0; min-width: 0;">
+              <label>Configurations</label>
+              <div class="file-group" style="display: flex; gap: 8px; align-items: flex-end;">
+                <select id="configSelect">
+                  <option value="">— Choisir une configuration —</option>
+                </select>
+                <button id="refreshList" class="refresh-btn" title="Rafraîchir la liste">↻</button>
+              </div>
             </div>
-          </div>
-          <div style="flex: 0 0 auto; height : 75px;">
-            <label>&nbsp;</label>
-            <div class="settings-menu">
-              <button class="settings-btn" id="settingsToggle" title="Paramètres avancés">⚙️</button>
+            <div style="flex: 0 0 auto; display: flex; align-items: flex-end;">
+              <div class="settings-menu">
+                <button class="settings-btn" id="settingsToggle" title="Paramètres avancés">⚙️</button>
+              </div>
             </div>
           </div>
         </div>
@@ -132,21 +126,38 @@
             <option value="\r">CR</option>
             <option value="">Aucun</option>
           </select>
+        </div>
 
+        <div class="control-group">
+          <label>Vitesse de transmission</label>
+          <select id="baud">
+            <option>4800</option>
+            <option>9600</option>
+            <option>19200</option>
+            <option>28800</option>
+            <option>38400</option>
+            <option>57600</option>
+            <option>76800</option>
+            <option selected>115200</option>
+            <option>230400</option>
+            <option>460800</option>
+            <option>576000</option>
+            <option>921600</option>
+          </select>
+        </div>
 
-          <div class="control-group">
-            <label>Délai entre commande(s)</label>
-            <input id="delay" type="number" min="0" step="0.1" value="5">
-          </div>
+        <div class="control-group">
+          <label>Délai entre commande(s)</label>
+          <input id="delay" type="number" min="0" step="0.1" value="5">
+        </div>
 
-          <div class="control-group">
-            <label>Charger un fichier personnel</label>
-            <input id="configFile" type="file" accept=".txt,.cfg,.conf,.ini,.log,.nmea,.csv,.*" />
-          </div>
+        <div class="control-group">
+          <label>Charger un fichier personnel</label>
+          <input id="configFile" type="file" accept=".txt,.cfg,.conf,.ini,.log,.nmea,.csv,.*" />
+        </div>
 
-          <div class="control-group">
-            <button id="save" class="btn btn-primary" style="width:100%;margin-top:8px">💾 SAVECONFIG</button>
-          </div>
+        <div class="control-group">
+          <button id="save" class="btn btn-primary" style="width:100%;margin-top:8px">💾 SAVECONFIG</button>
         </div>
       </div>
     </div>
@@ -164,6 +175,19 @@
 
     <script src="static/js/script.js"></script>
     <script src="static/js/index-script.js"></script>
+    <script>
+      // Sélection dynamique du transport par défaut selon la largeur d'écran
+      document.addEventListener('DOMContentLoaded', function () {
+        var transportSelect = document.getElementById('transport');
+        if (transportSelect) {
+          if (window.innerWidth <= 600) {
+            transportSelect.value = 'ble';
+          } else {
+            transportSelect.value = 'serial';
+          }
+        }
+      });
+    </script>
 </body>
 
 </html>

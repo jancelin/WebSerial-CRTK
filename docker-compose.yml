@@ -6,5 +6,29 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - .:/usr/share/nginx/html:ro
+      # Mount static files for live reload during development
+      - ./static:/usr/share/nginx/html/static
+      - ./index.html:/usr/share/nginx/html/index.html
+      - ./index_advanced.html:/usr/share/nginx/html/index_advanced.html
+      - ./conf_files:/usr/share/nginx/html/conf_files:ro
     restart: unless-stopped
+    depends_on:
+      - file-watcher
+    environment:
+      # Enable live reload in development
+      NGINX_HOST: localhost
+      NGINX_PORT: 80
+
+  # Optional: File watcher service for development
+  file-watcher:
+    image: node:alpine
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    command: |
+      sh -c 'npm install -g chokidar-cli 2>/dev/null || true &&
+             chokidar "static/**/*" "index.html" "index_advanced.html"
+             --initial --command "echo \"Files changed at \$(date)\" && ls -la static/ 2>/dev/null || true"'
+    restart: unless-stopped
+    profiles:
+      - watch # Use: docker-compose --profile watch up

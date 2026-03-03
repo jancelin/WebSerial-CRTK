@@ -265,7 +265,7 @@ async function populateConfigSelect(manual) {
 
     sel.innerHTML = mode === 'advanced'
         ? '<option value="">— Choisir un fichier (conf_files/advanced) —</option>'
-        : '<option value="">— Choisir une configuration (débutant) —</option>';
+        : '<option value="">Choisir une configuration</option>';
 
     // Beginner mode: prefer manifest (labels + emoji)
     if (mode === 'user') {

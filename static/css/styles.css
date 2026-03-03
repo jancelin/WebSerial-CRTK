@@ -14,13 +14,14 @@
 
 /* Common base styles */
 body {
-  font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0 clamp(12px, 4vw, 20px);
+  line-height: 1.6;
 }
 
 h1 {
-  margin: 24px 0;
+  margin: clamp(18px, 4vw, 28px) 0;
   text-align: center;
   color: var(--dark);
 }
@@ -30,40 +31,43 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: clamp(8px, 2vw, 16px);
 }
 
 .brand .logo {
-  height: 2.5em;
+  height: clamp(2rem, 6vw, 3rem);
   width: auto;
 }
 
 /* Mode Switch Styles - Common to both versions */
 .mode-switch-container {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: 16px;
+  right: 16px;
   z-index: 999;
   background: white;
-  border-radius: 25px;
-  padding: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  border: 1px solid #ddd;
+  border-radius: 28px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e8ecf1;
+  width: 175px;
 }
 
 .mode-switch {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  gap: 10px;
+  font-size: clamp(10px, 2vw, 13px);
   color: var(--dark);
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 .switch {
   position: relative;
   display: inline-block;
-  width: 44px;
-  height: 24px;
+  width: 48px;
+  height: 26px;
 }
 
 .switch input {
@@ -79,21 +83,22 @@ h1 {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
-  transition: .4s;
-  border-radius: 24px;
+  background-color: #d0d5dd;
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 26px;
 }
 
 .slider:before {
   position: absolute;
   content: "";
-  height: 18px;
-  width: 18px;
+  height: 20px;
+  width: 20px;
   left: 3px !important;
   bottom: 3px;
   background-color: white;
-  transition: .4s;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 input:checked + .slider {
@@ -101,12 +106,13 @@ input:checked + .slider {
 }
 
 input:checked + .slider:before {
-  transform: translateX(20px);
+  transform: translateX(22px);
 }
 
 .mode-label {
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
+  letter-spacing: 0.2px;
 }
 
 .mode-label.active {
@@ -115,13 +121,14 @@ input:checked + .slider:before {
 
 /* Common buttons */
 button {
-  font-size: 16px;
-  padding: 12px 24px;
-  border-radius: 8px;
+  font-size: clamp(0.9rem, 2.2vw, 1.05rem);
+  padding: clamp(10px, 2.5vw, 14px) clamp(16px, 3.5vw, 28px);
+  border-radius: 10px;
   border: none;
   cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s;
+  font-weight: 700;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.3px;
 }
 
 button[disabled] {
@@ -129,54 +136,85 @@ button[disabled] {
   cursor: not-allowed;
 }
 
+button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .btn-primary {
   background: var(--primary);
   color: white;
+  box-shadow: 0 4px 12px rgba(11, 87, 208, 0.25);
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not([disabled]) {
   background: #0943a6;
+  box-shadow: 0 6px 20px rgba(11, 87, 208, 0.35);
+  transform: translateY(-2px);
+}
+
+.btn-primary:active:not([disabled]) {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(11, 87, 208, 0.2);
 }
 
 .btn-success {
   background: var(--success);
   color: white;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.25);
 }
 
-.btn-success:hover {
+.btn-success:hover:not([disabled]) {
   background: #218838;
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.35);
+  transform: translateY(-2px);
+}
+
+.btn-success:active:not([disabled]) {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(40, 167, 69, 0.2);
 }
 
 /* Common form elements */
 select,
 input[type="number"],
 input[type="file"] {
-  font-size: 16px;
-  padding: 12px;
-  border-radius: 8px;
-  border: 2px solid #ddd;
-  background: #fff;
+  font-size: clamp(0.9rem, 2.2vw, 1rem);
+  padding: clamp(12px, 2.5vw, 14px);
+  border-radius: 10px;
+  border: 2px solid #e8ecf1;
+  background: white;
   width: 100%;
   max-width: none;
+  transition: all 0.3s;
+  font-weight: 500;
+  color: var(--dark);
+}
+
+select:hover,
+input:hover {
+  border-color: #d0d5dd;
 }
 
 select:focus,
 input:focus {
   outline: none;
   border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(11, 87, 208, 0.1);
 }
 
 /* Common footer */
 footer {
   margin-top: auto;
-  padding: 16px 0;
-  border-top: 1px solid #eee;
+  padding: clamp(14px, 3vw, 24px) 0;
+  border-top: 1px solid #e8ecf1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  font-size: 14px;
+  gap: clamp(8px, 2vw, 14px);
+  font-size: clamp(0.8rem, 1.8vw, 0.9rem);
   color: #666;
+  flex-wrap: wrap;
 }
 
 footer a {
@@ -185,11 +223,22 @@ footer a {
   gap: 6px;
   text-decoration: none;
   color: var(--primary);
+  transition: all 0.3s;
+  font-weight: 600;
+}
+
+footer a:hover {
+  color: #0943a6;
 }
 
 footer svg {
-  width: 16px;
-  height: 16px;
+  width: clamp(14px, 2.5vw, 18px);
+  height: clamp(14px, 2.5vw, 18px);
+  transition: transform 0.3s;
+}
+
+footer a:hover svg {
+  transform: translateY(-2px);
 }
 
 /* Common utility classes */
@@ -204,11 +253,32 @@ footer svg {
 /* Common responsive adjustments */
 @media (max-width: 768px) {
   .mode-switch-container {
+    top:0;
+    right: 0;
     position: relative;
-    top: auto;
-    right: auto;
-    margin-bottom: 16px;
+    margin-bottom: 0px;
+    margin-top: 16px;
+    margin-left: auto;
     justify-content: center;
     display: flex;
+  }
+
+  body {
+    padding: 0 10px;
+  }
+
+  button {
+    touch-action: manipulation;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 0 8px;
+  }
+
+  footer {
+    flex-direction: column;
+    gap: 6px;
   }
 }
