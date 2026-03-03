@@ -10,6 +10,9 @@ services:
       - ./static:/usr/share/nginx/html/static
       - ./index.html:/usr/share/nginx/html/index.html
       - ./index_advanced.html:/usr/share/nginx/html/index_advanced.html
+      # Ensure PWA assets are served at site root
+      - ./manifest.webmanifest:/usr/share/nginx/html/manifest.webmanifest:ro
+      - ./sw.js:/usr/share/nginx/html/sw.js:ro
       - ./conf_files:/usr/share/nginx/html/conf_files:ro
     restart: unless-stopped
     environment:
