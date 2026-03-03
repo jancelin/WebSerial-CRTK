@@ -12,8 +12,6 @@ services:
       - ./index_advanced.html:/usr/share/nginx/html/index_advanced.html
       - ./conf_files:/usr/share/nginx/html/conf_files:ro
     restart: unless-stopped
-    depends_on:
-      - file-watcher
     environment:
       # Enable live reload in development
       NGINX_HOST: localhost
