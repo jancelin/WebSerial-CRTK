@@ -232,6 +232,38 @@ async function connectTransport() {
     return await connectSerial();
 }
 
+// If the user is on a phone, disable USB (serial) option in the transport selector
+function disableUsbOnMobile() {
+    try {
+        const uaMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+        const touch = (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
+        const small = window.innerWidth <= 768;
+        const isPhone = uaMobile || (touch && small);
+
+        const sel = document.getElementById('transport');
+        if (!sel) return;
+        const opt = sel.querySelector('option[value="serial"]');
+        if (!opt) return;
+
+        if (isPhone) {
+            opt.disabled = true;
+            // annotate the label so users understand why it's disabled
+            if (!/mobile/i.test(opt.text)) opt.text = opt.text + ' (non disponible sur mobile)';
+            if (sel.value === 'serial') sel.value = 'ble';
+            if (typeof updateTransportUi === 'function') updateTransportUi();
+        } else {
+            // ensure enabled on non-mobile
+            opt.disabled = false;
+            opt.text = opt.text.replace(/\s*\(non disponible sur mobile\)$/, '');
+        }
+    } catch (e) {
+        console.warn('disableUsbOnMobile error', e);
+    }
+}
+
+window.addEventListener('DOMContentLoaded', disableUsbOnMobile);
+window.addEventListener('resize', disableUsbOnMobile);
+
 /**
  * Common disconnect based on current transport
  */
