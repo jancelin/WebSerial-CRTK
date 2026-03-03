@@ -282,3 +282,11 @@ footer a:hover svg {
     gap: 6px;
   }
 }
+
+body {
+  font-size: clamp(14px, 2vw, 18px);
+}
+
+h1 {
+  font-size: clamp(20px, 4vw, 32px);
+}
